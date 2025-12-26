@@ -67,7 +67,7 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
 
     HittableList create_scene() {
         HittableList world;
-        
+
         auto ground_material = std::make_shared<Lambertian>(Color3(0.5, 0.5, 0.5));
         world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100, ground_material));
 
@@ -82,3 +82,30 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
 
         return world;
 }
+
+int main() {
+    srand(static_cast<unsigned int>(time(NULL)));
+
+    const int screen_width = 800;
+    const int screen_height = 450;
+    const double aspect_ratio = (double)screen_width / screen_height;
+
+    InitWindow(screen_width, screen_height, "Ray Tracer (Raylib) - Book 1");
+    SetTargetFPS(60);
+
+    int samples_per_pixel = 1;
+    int max_depth = 10;
+    bool is_rendering = true;
+    int accumulated_samples = 0;
+
+    Point3 lookfrom(3, 1, 2);
+    Point3 lookat(0, 0, -1);
+    Vec3 vup(0, 1, 0);
+    double dist_to_focus = 3.0;
+    double aperture = 0.1;
+
+    RTCamera camera(lookfrom, lookat, vup, 40.0, aspect_ratio, aperture, dist_to_focus);
+}
+    
+
+    
