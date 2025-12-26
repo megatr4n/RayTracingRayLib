@@ -105,6 +105,44 @@ int main() {
     double aperture = 0.1;
 
     RTCamera camera(lookfrom, lookat, vup, 40.0, aspect_ratio, aperture, dist_to_focus);
+
+    std::vector<Color3> accumulation_buffer(screen_width * screen_height, Color3(0, 0, 0));
+    Image render_image = GenImageColor(screen_width, screen_height, BLACK);
+    Texture2D render_texture = LoadTextureFromImage(render_image);
+
+    HittableList world = create_scene();
+
+    float move_speed = 0.05f;
+    float mouse_sensitivity = 0.003f;
+    bool camera_moved = false;
+    Vector2 last_mouse_pos = GetMousePosition();
+
+    DisableCursor();
+
+    for (int j = 0; j < screen_height; j++) {
+        for (int i = 0; i < screen_width; i++) {
+            Color3 pixel_color(0, 0, 0);
+            for (int s = 0; s < 1; s++) {
+                double u = (i + 0.5) / (screen_width - 1);
+                double v = (j + 0.5) / (screen_height - 1);
+                RTRay r = camera.get_ray(u, 1.0 - v);
+                pixel_color += ray_color(r, world, max_depth);
+            }
+            accumulation_buffer[j * screen_width + i] = pixel_color;
+            
+            Color3 avg_color = pixel_color;
+            avg_color.x = sqrt(avg_color.x);
+            avg_color.y = sqrt(avg_color.y);
+            avg_color.z = sqrt(avg_color.z);
+            
+            unsigned char r = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.x)));
+            unsigned char g = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.y)));
+            unsigned char b = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.z)));
+            ImageDrawPixel(&render_image, i, j, {r, g, b, 255});
+        }
+    }
+    UpdateTexture(render_texture, render_image.data);
+    accumulated_samples = 1;
 }
     
 
