@@ -64,3 +64,21 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
     double t = 0.5 * (unit_direction.y + 1.0);
     return (1.0 - t) * Color3(1.0, 1.0, 1.0) + t * Color3(0.5, 0.7, 1.0);
 }
+
+    HittableList create_scene() {
+        HittableList world;
+        
+        auto ground_material = std::make_shared<Lambertian>(Color3(0.5, 0.5, 0.5));
+        world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100, ground_material));
+
+        auto material_center = std::make_shared<Lambertian>(Color3(0.7, 0.3, 0.3));
+        world.add(std::make_shared<Sphere>(Point3(0, 0, -1), 0.5, material_center));
+
+        auto material_left = std::make_shared<Dielectric>(1.5);
+        world.add(std::make_shared<Sphere>(Point3(-1, 0, -1), 0.5, material_left));
+
+        auto material_right = std::make_shared<Metal>(Color3(0.8, 0.6, 0.2), 0.0);
+        world.add(std::make_shared<Sphere>(Point3(1, 0, -1), 0.5, material_right));
+
+        return world;
+}
