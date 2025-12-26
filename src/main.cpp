@@ -46,3 +46,21 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
     scattered = RTRay(rec.p, direction);
     return true;
 }
+
+    Color3 ray_color(const RTRay& r, const HittableList& world, int depth) {
+    if (depth <= 0)
+        return Color3(0, 0, 0);
+
+    HitRecord rec;
+    if (world.hit(r, 0.001, INFINITY, rec)) {
+        RTRay scattered;
+        Color3 attenuation;
+        if (rec.mat->scatter(r, rec, attenuation, scattered))
+            return attenuation * ray_color(scattered, world, depth - 1);
+        return Color3(0, 0, 0);
+    }
+
+    Vec3 unit_direction = unit_vector(r.direction);
+    double t = 0.5 * (unit_direction.y + 1.0);
+    return (1.0 - t) * Color3(1.0, 1.0, 1.0) + t * Color3(0.5, 0.7, 1.0);
+}
