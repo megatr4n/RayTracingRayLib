@@ -83,6 +83,30 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
         return world;
 }
 
+    void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width, int height, int accumulated_samples) {
+        double scale = 1.0 / accumulated_samples;
+        unsigned char* pixels = (unsigned char*)image.data;
+        
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                int pixel_index = (j * width + i) * 4; 
+                
+                Color3 col = buffer[j * width + i] * scale;
+                
+                col.x = sqrt(col.x);
+                col.y = sqrt(col.y);
+                col.z = sqrt(col.z);
+                
+                pixels[pixel_index + 0] = (unsigned char)(256 * fmax(0.0, fmin(0.999, col.x)));
+                pixels[pixel_index + 1] = (unsigned char)(256 * fmax(0.0, fmin(0.999, col.y)));
+                pixels[pixel_index + 2] = (unsigned char)(256 * fmax(0.0, fmin(0.999, col.z)));
+                pixels[pixel_index + 3] = 255;
+            }
+        }
+    }
+
+
+
 int main() {
     srand(static_cast<unsigned int>(time(NULL)));
 
@@ -314,7 +338,8 @@ int main() {
                         }
                     }
                     UpdateTexture(render_texture, render_image.data);
-                    accumulated_samples = 1;
+                    accumulated_samples = 1; 
+
                 }
         
                 if (is_rendering && !camera_moved && accumulated_samples < 100) {
