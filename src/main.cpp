@@ -246,8 +246,125 @@ int main() {
             }
             UpdateTexture(render_texture, render_image.data);
             accumulated_samples = 1;
+
+            while (!WindowShouldClose()) {
+                camera_moved = false;
+                if (IsKeyDown(KEY_W)) { 
+                    camera.move_forward(move_speed);
+                    camera_moved = true; 
+                }
+                if (IsKeyDown(KEY_S)) { 
+                    camera.move_forward(-move_speed); 
+                    camera_moved = true; 
+                }
+                if (IsKeyDown(KEY_A)) { 
+                    camera.move_right(-move_speed); 
+                    camera_moved = true; 
+                }
+                if (IsKeyDown(KEY_D)) { 
+                    camera.move_right(move_speed); 
+                    camera_moved = true; 
+                }
+                if (IsKeyDown(KEY_SPACE)) { 
+                    camera.move_up(move_speed); 
+                    camera_moved = true; 
+                }
+                if (IsKeyDown(KEY_LEFT_SHIFT)) { 
+                    camera.move_up(-move_speed); 
+                    camera_moved = true; 
+                }
+        
+                Vector2 mouse_pos = GetMousePosition();
+                Vector2 mouse_delta = {mouse_pos.x - last_mouse_pos.x, mouse_pos.y - last_mouse_pos.y};
+                last_mouse_pos = mouse_pos;
+        
+                if (mouse_delta.x != 0 || mouse_delta.y != 0) {
+                    camera.rotate(-mouse_delta.x * mouse_sensitivity, -mouse_delta.y * mouse_sensitivity);
+                    camera_moved = true;
+                }
+        
+                if (IsKeyPressed(KEY_P)) is_rendering = !is_rendering;
+                if (IsKeyPressed(KEY_R)) camera_moved = true;
+                if (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD)) 
+                    samples_per_pixel = (samples_per_pixel + 1 < 10) ? samples_per_pixel + 1 : 10;
+                if (IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_SUBTRACT)) 
+                    samples_per_pixel = (samples_per_pixel - 1 > 1) ? samples_per_pixel - 1 : 1;
+        
+                if (camera_moved) {
+                    accumulated_samples = 0;
+                    for (auto& color : accumulation_buffer) color = Color3(0, 0, 0);
+                    
+                    for (int j = 0; j < screen_height; j++) {
+                        for (int i = 0; i < screen_width; i++) {
+                            double u = (i + 0.5) / (screen_width - 1);
+                            double v = (j + 0.5) / (screen_height - 1);
+                            RTRay r = camera.get_ray(u, 1.0 - v);
+                            Color3 pixel_color = ray_color(r, world, max_depth);
+                            
+                            accumulation_buffer[j * screen_width + i] = pixel_color;
+                            
+                            pixel_color.x = sqrt(pixel_color.x);
+                            pixel_color.y = sqrt(pixel_color.y);
+                            pixel_color.z = sqrt(pixel_color.z);
+                            
+                            unsigned char red = (unsigned char)(256 * fmax(0.0, fmin(0.999, pixel_color.x)));
+                            unsigned char green = (unsigned char)(256 * fmax(0.0, fmin(0.999, pixel_color.y)));
+                            unsigned char blue = (unsigned char)(256 * fmax(0.0, fmin(0.999, pixel_color.z)));
+                            ImageDrawPixel(&render_image, i, j, {red, green, blue, 255});
+                        }
+                    }
+                    UpdateTexture(render_texture, render_image.data);
+                    accumulated_samples = 1;
+                }
+        
+                if (is_rendering && !camera_moved && accumulated_samples < 100) {
+                    for (int j = 0; j < screen_height; j++) {
+                        for (int i = 0; i < screen_width; i++) {
+                            Color3 pixel_color(0, 0, 0);
+                            for (int s = 0; s < samples_per_pixel; s++) {
+                                double u = (i + ((double)rand() / RAND_MAX)) / (screen_width - 1);
+                                double v = (j + ((double)rand() / RAND_MAX)) / (screen_height - 1);
+                                RTRay r = camera.get_ray(u, 1.0 - v);
+                                pixel_color += ray_color(r, world, max_depth);
+                            }
+                            accumulation_buffer[j * screen_width + i] += pixel_color;
+                        }
+                    }
+                    accumulated_samples += samples_per_pixel;
+        
+                    for (int j = 0; j < screen_height; j++) {
+                        for (int i = 0; i < screen_width; i++) {
+                            Color3 avg_color = accumulation_buffer[j * screen_width + i] / (double)accumulated_samples;
+                            
+                            avg_color.x = sqrt(avg_color.x);
+                            avg_color.y = sqrt(avg_color.y);
+                            avg_color.z = sqrt(avg_color.z);
+                            
+                            unsigned char r = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.x)));
+                            unsigned char g = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.y)));
+                            unsigned char b = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.z)));
+                            ImageDrawPixel(&render_image, i, j, {r, g, b, 255});
+                        }
+                    }
+                    UpdateTexture(render_texture, render_image.data);
+                }
         }
+        BeginDrawing();
+        ClearBackground(BLACK);
+        DrawTexture(render_texture, 0, 0, WHITE);
+        DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, GREEN);
+        DrawText(TextFormat("Samples: %d", accumulated_samples), 10, 35, 20, GREEN);
+        DrawText(TextFormat("SPP: %d [+/-]", samples_per_pixel), 10, 60, 20, GREEN);
+        DrawText(is_rendering ? "Rendering [P]" : "Paused [P]", 10, 85, 20, is_rendering ? GREEN : RED);
+        DrawText("WASD: Move | Space/Shift: Up/Down | Mouse: Look | R: Reset", 10, screen_height - 30, 20, YELLOW);
+        EndDrawing();
+    }
+
+        UnloadTexture(render_texture);
+        UnloadImage(render_image);
+        CloseWindow();
+        return 0;
 }
-    
+}
 
     
