@@ -108,6 +108,7 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
 
 
 int main() {
+    SetConfigFlags(FLAG_WINDOW_HIGHDPI);
     srand(static_cast<unsigned int>(time(NULL)));
 
     const int screen_width = 800;
@@ -142,31 +143,6 @@ int main() {
     Vector2 last_mouse_pos = GetMousePosition();
 
     DisableCursor();
-
-    for (int j = 0; j < screen_height; j++) {
-        for (int i = 0; i < screen_width; i++) {
-            Color3 pixel_color(0, 0, 0);
-            for (int s = 0; s < 1; s++) {
-                double u = (i + 0.5) / (screen_width - 1);
-                double v = (j + 0.5) / (screen_height - 1);
-                RTRay r = camera.get_ray(u, 1.0 - v);
-                pixel_color += ray_color(r, world, max_depth);
-            }
-            accumulation_buffer[j * screen_width + i] = pixel_color;
-            
-            Color3 avg_color = pixel_color;
-            avg_color.x = sqrt(avg_color.x);
-            avg_color.y = sqrt(avg_color.y);
-            avg_color.z = sqrt(avg_color.z);
-            
-            unsigned char r = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.x)));
-            unsigned char g = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.y)));
-            unsigned char b = (unsigned char)(256 * fmax(0.0, fmin(0.999, avg_color.z)));
-            ImageDrawPixel(&render_image, i, j, {r, g, b, 255});
-        }
-    }
-    UpdateTexture(render_texture, render_image.data);
-    accumulated_samples = 1;
 
     while (!WindowShouldClose()) {
         camera_moved = false;
