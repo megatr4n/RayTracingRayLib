@@ -104,8 +104,7 @@ bool Dielectric::scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenu
             }
         }
     }
-
-
+    
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
