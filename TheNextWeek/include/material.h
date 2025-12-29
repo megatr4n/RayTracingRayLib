@@ -48,4 +48,4 @@ private:
     }
 };
 
-#endif // RT_MATERIAL_H
+#endif 

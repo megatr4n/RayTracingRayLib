@@ -1,6 +1,7 @@
 #ifndef RT_CAMERA_H
 #define RT_CAMERA_H
 
+#include "rtweekend.h"
 #include "ray.h"
 #include "vec3.h"
 #include <cmath>
@@ -19,6 +20,9 @@ public:
     double aperture;
     double focus_dist;
 
+    double time0 = 0;
+    double time1 = 0;
+
     Point3 origin;
     Vec3 horizontal;
     Vec3 vertical;
@@ -32,14 +36,16 @@ public:
            double vfov = 90.0,
            double aspect_ratio = 16.0 / 9.0,
            double aperture = 0.0,
-           double focus_dist = 1.0)
+           double focus_dist = 1.0,
+           double time0 = 0.0,
+           double time1 = 0.0)
         : position(position), look_at(look_at), vup(vup), vfov(vfov),
           aspect_ratio(aspect_ratio), aperture(aperture), focus_dist(focus_dist) {
         update();
     }
 
     void update() {
-        double theta = vfov * M_PI / 180.0;
+        double theta = degrees_to_radians(vfov);
         double h = std::tan(theta / 2.0);
         double viewport_height = 2.0 * h;
         double viewport_width = aspect_ratio * viewport_height;
@@ -60,8 +66,10 @@ public:
         Vec3 rd = lens_radius * random_in_unit_disk();
         Vec3 offset = u * rd.x + v * rd.y;
 
+        double ray_time = random_double(time0, time1);
+
         return RTRay(origin + offset,
-                   lower_left_corner + s * horizontal + t * vertical - origin - offset);
+                   lower_left_corner + s * horizontal + t * vertical - origin - offset, ray_time);
     }
 
     void move_forward(double speed) {
@@ -93,7 +101,7 @@ public:
         current_yaw += yaw;
         current_pitch += pitch;
 
-        const double max_pitch = M_PI / 2.0 - 0.01;
+        const double max_pitch = pi / 2.0 - 0.01;
         if (current_pitch > max_pitch) current_pitch = max_pitch;
         if (current_pitch < -max_pitch) current_pitch = -max_pitch;
 
