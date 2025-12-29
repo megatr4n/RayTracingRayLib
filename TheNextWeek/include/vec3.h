@@ -6,6 +6,18 @@ class Vec3 {
 public:
     double x, y, z;
 
+    double operator[](int i) const {
+        if (i == 0) return x;
+        if (i == 1) return y;
+        return z;
+    }
+
+    double& operator[](int i) {
+        if (i == 0) return x;
+        if (i == 1) return y;
+        return z;
+    }
+
     Vec3() : x(0), y(0), z(0) {}
     Vec3(double x, double y, double z) : x(x), y(y), z(z) {}
 
@@ -57,11 +69,9 @@ private:
     }
 };
 
-// Псевдонимы для удобства
 using Point3 = Vec3;
-using Color3 = Vec3;  // Изменили с Color на Color3
+using Color3 = Vec3;  
 
-// Вспомогательные функции
 inline Vec3 operator*(double t, const Vec3& v) {
     return v * t;
 }
