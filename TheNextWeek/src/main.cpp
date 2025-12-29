@@ -7,6 +7,7 @@
 #include "../include/camera.h"
 #include "../include/hittable.h"
 #include "../include/material.h"
+#include "../include/bvh.h"
 
 #include <memory>
 #include <vector>
@@ -19,7 +20,7 @@ Color3 ray_color(const RTRay& r, const HittableList& world, int depth) {
         return Color3(0, 0, 0);
 
     HitRecord rec;
-    if (world.hit(r, 0.001, std::numeric_limits<double>::infinity(), rec)) {
+        if (world.hit(r, interval(0.001, infinity), rec)) {
         RTRay scattered;
         Color3 attenuation;
         if (rec.mat->scatter(r, rec, attenuation, scattered))
@@ -74,19 +75,64 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
     }
 }
 
+    HittableList random_scene() {
+        HittableList world;
+
+        auto ground_material = std::make_shared<Lambertian>(Color3(0.5, 0.5, 0.5));
+        world.add(std::make_shared<Sphere>(Point3(0, -1000, 0), 1000, ground_material));
+
+        for (int a = -5; a < 5; a++) {
+            for (int b = -5; b < 5; b++) {
+                auto choose_mat = random_double();
+                Point3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double());
+
+                if ((center - Point3(4, 0.2, 0)).length() > 0.9) {
+                    std::shared_ptr<RTMaterial> sphere_material;
+
+                    if (choose_mat < 0.8) {
+                        auto albedo = Color3::random() * Color3::random();
+                        sphere_material = std::make_shared<Lambertian>(albedo);
+                        
+                        auto center2 = center + Vec3(0, random_double(0, 0.5), 0);
+                        world.add(std::make_shared<Sphere>(center, center2, 0.2, sphere_material));
+                    } else if (choose_mat < 0.95) {
+                        auto albedo = Color3::random(0.5, 1);
+                        auto fuzz = random_double(0, 0.5);
+                        sphere_material = std::make_shared<Metal>(albedo, fuzz);
+                        world.add(std::make_shared<Sphere>(center, 0.2, sphere_material));
+                    } else {
+                        sphere_material = std::make_shared<Dielectric>(1.5);
+                        world.add(std::make_shared<Sphere>(center, 0.2, sphere_material));
+                    }
+                }
+            }
+        }
+
+        auto material1 = std::make_shared<Dielectric>(1.5);
+        world.add(std::make_shared<Sphere>(Point3(0, 1, 0), 1.0, material1));
+
+        auto material2 = std::make_shared<Lambertian>(Color3(0.4, 0.2, 0.1));
+        world.add(std::make_shared<Sphere>(Point3(-4, 1, 0), 1.0, material2));
+
+        auto material3 = std::make_shared<Metal>(Color3(0.7, 0.6, 0.5), 0.0);
+        world.add(std::make_shared<Sphere>(Point3(4, 1, 0), 1.0, material3));
+
+        return HittableList(std::make_shared<BVHNode>(world));
+    }
+
 int main() {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
     srand(static_cast<unsigned int>(time(NULL)));
 
-    const int screen_width = 800;
-    const int screen_height = 450;
+    const int screen_width = 200;
+    const int screen_height = 112;
     const double aspect_ratio = (double)screen_width / screen_height;
 
     InitWindow(screen_width, screen_height, "Ray Tracing: The Next Week (Raylib)");
     SetTargetFPS(60);
 
     int samples_per_pixel = 1;
-    int max_depth = 10;
+    int max_depth = 4;
     bool is_rendering = true;
     int accumulated_samples = 0;
 
@@ -102,7 +148,7 @@ int main() {
     Image render_image = GenImageColor(screen_width, screen_height, BLACK);
     Texture2D render_texture = LoadTextureFromImage(render_image);
 
-    HittableList world = create_scene();
+    HittableList world = random_scene();
 
     float move_speed = 0.05f;
     float mouse_sensitivity = 0.003f;
@@ -157,7 +203,7 @@ int main() {
             for (int j = 0; j < screen_height; j++) {
                 for (int i = 0; i < screen_width; i++) {
                     Color3 pixel_color(0, 0, 0);
-                    for (int s = 0; s < samples_per_pixel; s++) {
+                    for (int s = 0; s < 1; s++) {
                         double u = (i + random_double()) / (screen_width - 1);
                         double v = (j + random_double()) / (screen_height - 1);
                         RTRay r = camera.get_ray(u, 1.0 - v);
