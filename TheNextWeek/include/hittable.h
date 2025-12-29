@@ -74,8 +74,9 @@ public:
         rec.p = r.at(rec.t);
         Vec3 outward_normal = (rec.p - center) / radius;
         rec.set_face_normal(r, outward_normal);
-        rec.u = 0; 
-        rec.v = 0;
+
+        get_sphere_uv(outward_normal, rec.u, rec.v);
+
         rec.mat = mat;
 
         return true;
@@ -95,6 +96,14 @@ private:
 
     Point3 sphere_center(double time) const {
         return center1 + time * (center2 - center1);
+    }
+    
+    static void get_sphere_uv(const Point3& p, double& u, double& v) {
+        auto theta = acos(-p.y);
+        auto phi = atan2(-p.z, p.x) + pi;
+
+        u = phi / (2 * pi);
+        v = theta / pi;
     }
 };
 

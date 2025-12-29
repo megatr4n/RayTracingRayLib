@@ -16,12 +16,12 @@ public:
 class Lambertian : public RTMaterial {
 public:
     Lambertian(const Color3& albedo);
-    Lambertian(std::shared_ptr<Texture> tex);
+    Lambertian(std::shared_ptr<RTTexture> tex); 
 
     bool scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenuation, RTRay& scattered) const override;
 
 private:
-    std::shared_ptr<Texture> tex; 
+    std::shared_ptr<RTTexture> tex; 
 };
 
 class Metal : public RTMaterial {

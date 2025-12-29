@@ -4,18 +4,19 @@
 #include "rtweekend.h"
 #include "vec3.h"
 
-class Texture {
+class RTTexture {
 public:
-    virtual ~Texture() = default;
+    virtual ~RTTexture() = default;
     virtual Color3 value(double u, double v, const Point3& p) const = 0;
 };
 
-class SolidColor : public Texture {
+class SolidColor : public RTTexture {
 public:
     SolidColor(const Color3& albedo) : albedo(albedo) {}
     SolidColor(double red, double green, double blue) : SolidColor(Color3(red, green, blue)) {}
 
     Color3 value(double u, double v, const Point3& p) const override {
+        (void)u; (void)v; (void)p;
         return albedo;
     }
 
@@ -23,9 +24,9 @@ private:
     Color3 albedo;
 };
 
-class CheckerTexture : public Texture {
+class CheckerTexture : public RTTexture {
 public:
-    CheckerTexture(double scale, std::shared_ptr<Texture> even, std::shared_ptr<Texture> odd)
+    CheckerTexture(double scale, std::shared_ptr<RTTexture> even, std::shared_ptr<RTTexture> odd)
         : inv_scale(1.0 / scale), even(even), odd(odd) {}
 
     CheckerTexture(double scale, const Color3& c1, const Color3& c2)
@@ -45,8 +46,8 @@ public:
 
 private:
     double inv_scale;
-    std::shared_ptr<Texture> even;
-    std::shared_ptr<Texture> odd;
+    std::shared_ptr<RTTexture> even;
+    std::shared_ptr<RTTexture> odd;
 };
 
 #endif
