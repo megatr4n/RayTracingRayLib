@@ -83,6 +83,11 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         auto ground_material = std::make_shared<Lambertian>(checker);
         world.add(std::make_shared<Sphere>(Point3(0, -1000, 0), 1000, ground_material));
 
+        auto earth_texture = std::make_shared<ImageTexture>("earthmap.png");
+        auto earth_surface = std::make_shared<Lambertian>(earth_texture);
+        world.add(std::make_shared<Sphere>(Point3(0, -1000, 0), 1000, earth_surface));
+        world.add(std::make_shared<Sphere>(Point3(0, 2, 0), 1.5, earth_surface));
+
         for (int a = -5; a < 5; a++) {
             for (int b = -5; b < 5; b++) {
                 auto choose_mat = random_double();
