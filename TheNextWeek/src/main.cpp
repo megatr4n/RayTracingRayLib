@@ -8,6 +8,7 @@
 #include "../include/hittable.h"
 #include "../include/material.h"
 #include "../include/bvh.h"
+#include "../include/quad.h"
 
 #include <memory>
 #include <vector>
@@ -131,6 +132,25 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         return HittableList(std::make_shared<BVHNode>(world));
     }
 
+    HittableList quads_scene() {
+        HittableList world;
+    
+        auto left_red     = std::make_shared<Lambertian>(Color3(1.0, 0.2, 0.2));
+        auto back_green   = std::make_shared<Lambertian>(Color3(0.2, 1.0, 0.2));
+        auto right_blue   = std::make_shared<Lambertian>(Color3(0.2, 0.2, 1.0));
+        auto upper_orange = std::make_shared<Lambertian>(Color3(1.0, 0.5, 0.0));
+        auto lower_teal   = std::make_shared<Lambertian>(Color3(0.2, 0.8, 0.8));
+    
+        world.add(std::make_shared<Quad>(Point3(-3,-2, 5), Vec3(0, 0,-4), Vec3(0, 4, 0), left_red));
+        world.add(std::make_shared<Quad>(Point3(-2,-2, 0), Vec3(4, 0, 0), Vec3(0, 4, 0), back_green));
+        world.add(std::make_shared<Quad>(Point3( 3,-2, 1), Vec3(0, 0, 4), Vec3(0, 4, 0), right_blue));
+        world.add(std::make_shared<Quad>(Point3(-2, 3, 1), Vec3(4, 0, 0), Vec3(0, 0, 4), upper_orange));
+        world.add(std::make_shared<Quad>(Point3(-2,-3, 5), Vec3(4, 0, 0), Vec3(0, 0,-4), lower_teal));
+    
+        return world;
+    }
+
+
 int main() {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
     srand(static_cast<unsigned int>(time(NULL)));
@@ -159,7 +179,7 @@ int main() {
     Image render_image = GenImageColor(screen_width, screen_height, BLACK);
     Texture2D render_texture = LoadTextureFromImage(render_image);
 
-    HittableList world = random_scene();
+    HittableList world = quads_scene();
 
     float move_speed = 0.05f;
     float mouse_sensitivity = 0.003f;
