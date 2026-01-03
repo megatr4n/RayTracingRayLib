@@ -164,28 +164,48 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         return world;
     }
 
+    HittableList cornell_box() {
+        HittableList world;
+    
+        auto red   = std::make_shared<Lambertian>(Color3(0.65, 0.05, 0.05));
+        auto white = std::make_shared<Lambertian>(Color3(0.73, 0.73, 0.73));
+        auto green = std::make_shared<Lambertian>(Color3(0.12, 0.45, 0.15));
+        auto light = std::make_shared<DiffuseLight>(Color3(15, 15, 15)); 
+    
+        
+        world.add(std::make_shared<Quad>(Point3(555, 0, 0), Vec3(0, 555, 0), Vec3(0, 0, 555), green));
+        world.add(std::make_shared<Quad>(Point3(0, 0, 0), Vec3(0, 555, 0), Vec3(0, 0, 555), red));
+        world.add(std::make_shared<Quad>(Point3(343, 554, 332), Vec3(-130, 0, 0), Vec3(0, 0, -105), light));
+        world.add(std::make_shared<Quad>(Point3(0, 0, 0), Vec3(555, 0, 0), Vec3(0, 0, 555), white));
+        world.add(std::make_shared<Quad>(Point3(555, 555, 555), Vec3(-555, 0, 0), Vec3(0, 0, -555), white));
+        world.add(std::make_shared<Quad>(Point3(0, 0, 555), Vec3(555, 0, 0), Vec3(0, 555, 0), white));
+    
+        return world;
+    }
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
     srand(static_cast<unsigned int>(time(NULL)));
 
-    const int screen_width = 200;
-    const int screen_height = 112;
-    const double aspect_ratio = (double)screen_width / screen_height;
+    const int screen_width = 600;
+    const int screen_height = 600;
+    const double aspect_ratio = 1.0;
 
     InitWindow(screen_width, screen_height, "Ray Tracing: The Next Week (Raylib)");
     SetTargetFPS(60);
 
-    int samples_per_pixel = 1;
-    int max_depth = 4;
+    int samples_per_pixel = 50; 
+    int max_depth = 50;         
     bool is_rendering = true;
     int accumulated_samples = 0;
 
-    Point3 lookfrom(3, 1, 2);
-    Point3 lookat(0, 0, -1);
+    Point3 lookfrom(278, 278, -800);
+    Point3 lookat(278, 278, 0);
     Vec3 vup(0, 1, 0);
-    double dist_to_focus = 3.0;
-    double aperture = 0.1;
+
+    double vfov = 40.0;      
+    double dist_to_focus = 10.0; 
+    double aperture = 0.0;
 
     RTCamera camera(lookfrom, lookat, vup, 40.0, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);
 
@@ -193,10 +213,13 @@ int main() {
     Image render_image = GenImageColor(screen_width, screen_height, BLACK);
     Texture2D render_texture = LoadTextureFromImage(render_image);
 
-    HittableList world = simple_light();
+    HittableList world = cornell_box();
 
-    float move_speed = 0.05f;
+    float move_speed = 10.0f;
     float mouse_sensitivity = 0.003f;
+
+    samples_per_pixel = 1;
+
     bool camera_moved = false;
     Vector2 last_mouse_pos = GetMousePosition();
 
@@ -205,12 +228,30 @@ int main() {
     while (!WindowShouldClose()) {
         camera_moved = false;
 
-        if (IsKeyDown(KEY_W)) { camera.move_forward(move_speed); camera_moved = true; }
-        if (IsKeyDown(KEY_S)) { camera.move_forward(-move_speed); camera_moved = true; }
-        if (IsKeyDown(KEY_A)) { camera.move_right(-move_speed); camera_moved = true; }
-        if (IsKeyDown(KEY_D)) { camera.move_right(move_speed); camera_moved = true; }
-        if (IsKeyDown(KEY_SPACE)) { camera.move_up(move_speed); camera_moved = true; }
-        if (IsKeyDown(KEY_LEFT_SHIFT)) { camera.move_up(-move_speed); camera_moved = true; }
+        if (IsKeyDown(KEY_W)) { 
+            camera.move_forward(move_speed); 
+            camera_moved = true; 
+        }
+        if (IsKeyDown(KEY_S)) { 
+            camera.move_forward(-move_speed); 
+            camera_moved = true; 
+        }
+        if (IsKeyDown(KEY_A)) { 
+            camera.move_right(-move_speed); 
+            camera_moved = true; 
+        }
+        if (IsKeyDown(KEY_D)) { 
+            camera.move_right(move_speed); 
+            camera_moved = true; 
+        }
+        if (IsKeyDown(KEY_SPACE)) { 
+            camera.move_up(move_speed); 
+            camera_moved = true; 
+        }
+        if (IsKeyDown(KEY_LEFT_SHIFT)) { 
+            camera.move_up(-move_speed); 
+            camera_moved = true; 
+        }
 
         Vector2 mouse_pos = GetMousePosition();
         Vector2 mouse_delta = {mouse_pos.x - last_mouse_pos.x, mouse_pos.y - last_mouse_pos.y};
@@ -244,11 +285,11 @@ int main() {
             buffer_to_image(render_image, accumulation_buffer, screen_width, screen_height, 1);
             UpdateTexture(render_texture, render_image.data);
         }
-        else if (is_rendering && accumulated_samples < 5000) {
+        else if (is_rendering) {
             for (int j = 0; j < screen_height; j++) {
                 for (int i = 0; i < screen_width; i++) {
                     Color3 pixel_color(0, 0, 0);
-                    for (int s = 0; s < 1; s++) {
+                    for (int s = 0; s < samples_per_pixel; s++) {
                         double u = (i + random_double()) / (screen_width - 1);
                         double v = (j + random_double()) / (screen_height - 1);
                         RTRay r = camera.get_ray(u, 1.0 - v);
