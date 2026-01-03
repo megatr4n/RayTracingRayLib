@@ -21,17 +21,18 @@ Color3 ray_color(const RTRay& r, const HittableList& world, int depth) {
         return Color3(0, 0, 0);
 
     HitRecord rec;
-        if (world.hit(r, interval(0.001, infinity), rec)) {
+
+        if (!world.hit(r, interval(0.001, infinity), rec))
+            return Color3(0, 0, 0);
+
+        Color3 emission_color = rec.mat->emitted(rec.u, rec.v, rec.p);
         RTRay scattered;
         Color3 attenuation;
-        if (rec.mat->scatter(r, rec, attenuation, scattered))
-            return attenuation * ray_color(scattered, world, depth - 1);
-        return Color3(0, 0, 0);
-    }
 
-    Vec3 unit_direction = unit_vector(r.direction);
-    double t = 0.5 * (unit_direction.y + 1.0);
-    return (1.0 - t) * Color3(1.0, 1.0, 1.0) + t * Color3(0.5, 0.7, 1.0);
+        if (rec.mat->scatter(r, rec, attenuation, scattered)) {
+            return emission_color + attenuation * ray_color(scattered, world, depth - 1);
+        }
+        return emission_color;
 }
 
 HittableList create_scene() {
@@ -150,6 +151,19 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         return world;
     }
 
+    HittableList simple_light() {
+        HittableList world;
+    
+        auto pertext = std::make_shared<NoiseTexture>(4);
+        world.add(std::make_shared<Sphere>(Point3(0, -1000, 0), 1000, std::make_shared<Lambertian>(pertext)));
+        world.add(std::make_shared<Sphere>(Point3(0, 2, 0), 2, std::make_shared<Lambertian>(pertext)));
+    
+        auto difflight = std::make_shared<DiffuseLight>(Color3(4, 4, 4));
+        world.add(std::make_shared<Quad>(Point3(3, 1, -2), Vec3(2, 0, 0), Vec3(0, 2, 0), difflight));
+        world.add(std::make_shared<Sphere>(Point3(0, 7, 0), 2, difflight));
+        return world;
+    }
+
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
@@ -179,7 +193,7 @@ int main() {
     Image render_image = GenImageColor(screen_width, screen_height, BLACK);
     Texture2D render_texture = LoadTextureFromImage(render_image);
 
-    HittableList world = quads_scene();
+    HittableList world = simple_light();
 
     float move_speed = 0.05f;
     float mouse_sensitivity = 0.003f;
