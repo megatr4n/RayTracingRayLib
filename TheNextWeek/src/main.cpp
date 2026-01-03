@@ -88,6 +88,10 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         world.add(std::make_shared<Sphere>(Point3(0, -1000, 0), 1000, earth_surface));
         world.add(std::make_shared<Sphere>(Point3(0, 2, 0), 1.5, earth_surface));
 
+        auto pertext = std::make_shared<NoiseTexture>(4.0);
+        world.add(std::make_shared<Sphere>(Point3(0, -1000, 0), 1000, std::make_shared<Lambertian>(pertext)));
+        world.add(std::make_shared<Sphere>(Point3(0, 2, 0), 2, std::make_shared<Lambertian>(pertext)));
+
         for (int a = -5; a < 5; a++) {
             for (int b = -5; b < 5; b++) {
                 auto choose_mat = random_double();

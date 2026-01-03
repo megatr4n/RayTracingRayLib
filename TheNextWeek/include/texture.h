@@ -5,6 +5,7 @@
 
 #include "rtweekend.h"
 #include "vec3.h"
+#include "perlin.h"
 
 class RTTexture {
 public:
@@ -51,6 +52,18 @@ private:
     std::shared_ptr<RTTexture> even;
     std::shared_ptr<RTTexture> odd;
 };
+
+class NoiseTexture : public RTTexture {
+  public:
+      NoiseTexture(double scale) : scale(scale) {}
+      Color3 value(double u, double v, const Point3& p) const override {
+          return Color3(1, 1, 1) * 0.5 * (1 + sin(scale * p.z + 10 * noise.turb(p, 7)));
+      }
+  private:
+      Perlin noise;
+      double scale;
+  };
+
 
 class ImageTexture : public RTTexture {
   public:
