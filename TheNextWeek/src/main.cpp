@@ -164,6 +164,26 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         return world;
     }
 
+    std::shared_ptr<HittableList> box(const Point3& a, const Point3& b, std::shared_ptr<RTMaterial> mat) {
+        auto sides = std::make_shared<HittableList>();
+    
+        Point3 min(fmin(a.x, b.x), fmin(a.y, b.y), fmin(a.z, b.z));
+        Point3 max(fmax(a.x, b.x), fmax(a.y, b.y), fmax(a.z, b.z));
+    
+        Vec3 dx(max.x - min.x, 0, 0);
+        Vec3 dy(0, max.y - min.y, 0);
+        Vec3 dz(0, 0, max.z - min.z);
+    
+        sides->add(std::make_shared<Quad>(Point3(min.x, min.y, max.z),  dx,  dy, mat)); 
+        sides->add(std::make_shared<Quad>(Point3(max.x, min.y, max.z), -dz,  dy, mat)); 
+        sides->add(std::make_shared<Quad>(Point3(max.x, min.y, min.z), -dx,  dy, mat)); 
+        sides->add(std::make_shared<Quad>(Point3(min.x, min.y, min.z),  dz,  dy, mat)); 
+        sides->add(std::make_shared<Quad>(Point3(min.x, max.y, max.z),  dx, -dz, mat)); 
+        sides->add(std::make_shared<Quad>(Point3(min.x, min.y, min.z),  dx,  dz, mat));
+    
+        return sides;
+    }
+
     HittableList cornell_box() {
         HittableList world;
     
@@ -179,6 +199,10 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         world.add(std::make_shared<Quad>(Point3(0, 0, 0), Vec3(555, 0, 0), Vec3(0, 0, 555), white));
         world.add(std::make_shared<Quad>(Point3(555, 555, 555), Vec3(-555, 0, 0), Vec3(0, 0, -555), white));
         world.add(std::make_shared<Quad>(Point3(0, 0, 555), Vec3(555, 0, 0), Vec3(0, 555, 0), white));
+        
+
+        world.add(box(Point3(130, 0, 65), Point3(295, 165, 230), white));
+        world.add(box(Point3(265, 0, 295), Point3(430, 330, 460), white));
     
         return world;
     }
