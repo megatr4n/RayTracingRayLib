@@ -10,6 +10,7 @@
 #include "../include/bvh.h"
 #include "../include/quad.h"
 #include "../include/transform.h"
+#include "../include/constant_medium.h"
 
 #include <memory>
 #include <vector>
@@ -208,21 +209,23 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         std::shared_ptr<Hittable> box1 = box(Point3(0, 0, 0), Point3(165, 330, 165), white);
         box1 = std::make_shared<RotateY>(box1, 15);
         box1 = std::make_shared<Translate>(box1, Vec3(265, 0, 295));
-        world.add(box1);
+
         std::shared_ptr<Hittable> box2 = box(Point3(0, 0, 0), Point3(165, 165, 165), white);
         box2 = std::make_shared<RotateY>(box2, -18);
         box2 = std::make_shared<Translate>(box2, Vec3(130, 0, 65));
-        world.add(box2);
-    
-        return world;
+
+        world.add(std::make_shared<ConstantMedium>(box1, 0.01, Color3(0, 0, 0))); 
+        world.add(std::make_shared<ConstantMedium>(box2, 0.01, Color3(1, 1, 1)));
+
+    return world;
     }
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
     srand(static_cast<unsigned int>(time(NULL)));
 
-    const int screen_width = 600;
-    const int screen_height = 600;
+    const int screen_width = 400;
+    const int screen_height = 400;
     const double aspect_ratio = 1.0;
 
     InitWindow(screen_width, screen_height, "Ray Tracing: The Next Week (Raylib)");

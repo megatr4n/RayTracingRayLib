@@ -68,4 +68,17 @@ class DiffuseLight : public RTMaterial {
         std::shared_ptr<RTTexture> tex;
     };
 
+    class Isotropic : public RTMaterial {
+        public:
+            Isotropic(const Color3& c) : tex(std::make_shared<SolidColor>(c)) {}
+            Isotropic(std::shared_ptr<RTTexture> tex) : tex(tex) {}
+            bool scatter(const RTRay& r_in, const HitRecord& rec, Color3& attenuation, RTRay& scattered) const override {
+                scattered = RTRay(rec.p, random_unit_vector());
+                attenuation = tex->value(rec.u, rec.v, rec.p);
+                return true;
+            }
+        private:
+            std::shared_ptr<RTTexture> tex;
+        };
+
 #endif

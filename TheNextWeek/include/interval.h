@@ -55,4 +55,5 @@ inline interval operator+(double displacement, const interval& ival) {
         return ival + displacement;
 }
 
+
 #endif
