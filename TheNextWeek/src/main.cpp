@@ -9,6 +9,7 @@
 #include "../include/material.h"
 #include "../include/bvh.h"
 #include "../include/quad.h"
+#include "../include/transform.h"
 
 #include <memory>
 #include <vector>
@@ -199,10 +200,19 @@ void buffer_to_image(Image& image, const std::vector<Color3>& buffer, int width,
         world.add(std::make_shared<Quad>(Point3(0, 0, 0), Vec3(555, 0, 0), Vec3(0, 0, 555), white));
         world.add(std::make_shared<Quad>(Point3(555, 555, 555), Vec3(-555, 0, 0), Vec3(0, 0, -555), white));
         world.add(std::make_shared<Quad>(Point3(0, 0, 555), Vec3(555, 0, 0), Vec3(0, 555, 0), white));
-        
+
 
         world.add(box(Point3(130, 0, 65), Point3(295, 165, 230), white));
         world.add(box(Point3(265, 0, 295), Point3(430, 330, 460), white));
+
+        std::shared_ptr<Hittable> box1 = box(Point3(0, 0, 0), Point3(165, 330, 165), white);
+        box1 = std::make_shared<RotateY>(box1, 15);
+        box1 = std::make_shared<Translate>(box1, Vec3(265, 0, 295));
+        world.add(box1);
+        std::shared_ptr<Hittable> box2 = box(Point3(0, 0, 0), Point3(165, 165, 165), white);
+        box2 = std::make_shared<RotateY>(box2, -18);
+        box2 = std::make_shared<Translate>(box2, Vec3(130, 0, 65));
+        world.add(box2);
     
         return world;
     }
@@ -231,7 +241,7 @@ int main() {
     double dist_to_focus = 10.0; 
     double aperture = 0.0;
 
-    RTCamera camera(lookfrom, lookat, vup, 40.0, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);
+    RTCamera camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);
 
     std::vector<Color3> accumulation_buffer(screen_width * screen_height, Color3(0, 0, 0));
     Image render_image = GenImageColor(screen_width, screen_height, BLACK);
