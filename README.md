@@ -2,6 +2,7 @@
 
 
 <img src="./assets/inOneWeekend.gif" alt="Demo" width="600">
+<img src="./assets/theNextWeek.gif" alt="Book 2: The Next Week" width="45%">
 
 
 ##  Overview
@@ -13,7 +14,7 @@ The goal is to move from a basic ray tracer to a full Monte Carlo path tracer.
 | Project | Status | Description |
 | :--- | :--- | :--- |
 | **[Book 1: In One Weekend](./inOneWeekend)** | ✅ Completed | Basic spheres, materials (matte, metal, glass), camera, and defocus blur. |
-| **[Book 2: The Next Week](./Book2)** | 🚧 Planned | Motion blur, BVH (optimization), image textures, Perlin noise, lights, and volumes. |
+| **[Book 2: The Next Week](./TheNextWeek)** | ✅ Completed | Motion blur, BVH (optimization), image textures, Perlin noise, lights, and volumes. |
 | **[Book 3: The Rest of Your Life](./Book3)** | 🚧 Planned | Monte Carlo integration, importance sampling, and advanced PDF management. |
 
 ##  Key Features of the Port
