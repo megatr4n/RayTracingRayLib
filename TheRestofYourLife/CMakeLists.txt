@@ -35,6 +35,7 @@ FetchContent_MakeAvailable(raylib)
 
 set(SOURCES
     src/main.cpp
+    src/material.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
