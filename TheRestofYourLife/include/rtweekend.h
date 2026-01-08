@@ -55,4 +55,5 @@ inline Vec3 random_cosine_direction() {
     return Vec3(x, y, z);
 }
 
+
 #endif

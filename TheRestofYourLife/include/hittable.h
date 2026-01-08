@@ -159,8 +159,13 @@ public:
         return sum;
     }
 
+    Vec3 random(const Point3& origin) const override {
+        auto int_size = int(objects.size());
+        return objects[random_int(0, int_size - 1)]->random(origin);
+    }
+
 private:
     AABB bbox;
 };
 
-#endif 
+#endif

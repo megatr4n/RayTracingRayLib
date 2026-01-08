@@ -4,7 +4,8 @@
 #include "hittable.h" 
 #include "camera.h"   
 #include "material.h"
-#include "quad.h"     
+#include "quad.h"
+#include "pdf.h" 
 
 #include <cmath>
 #include <vector>
@@ -32,29 +33,44 @@ inline std::shared_ptr<HittableList> box(const Point3& a, const Point3& b, std::
     return sides;
 }
 
-Color3 ray_color(const RTRay& r, int depth, const Hittable& world) {
+Color3 ray_color(const RTRay& r, int depth, const Hittable& world, const Hittable& lights) {
     if (depth <= 0) return Color3(0,0,0);
 
     HitRecord rec;
-    if (!world.hit(r, interval(0.01, infinity), rec))
+    if (!world.hit(r, interval(0.001, infinity), rec))
         return Color3(0,0,0);
 
-    RTRay scattered;
-    Color3 attenuation;
-    Color3 color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
+    ScatterRecord srec;
+    
+    Color3 color_from_emission = rec.mat->emitted(r, rec, rec.u, rec.v, rec.p);
 
-    if (!rec.mat->scatter(r, rec, attenuation, scattered))
+    if (!rec.mat->scatter(r, rec, srec))
         return color_from_emission;
 
-    return color_from_emission + attenuation * ray_color(scattered, depth-1, world);
+    if (srec.skip_pdf) {
+        return srec.attenuation * ray_color(srec.skip_pdf_ray, depth-1, world, lights);
+    }
+
+    auto light_ptr = std::make_shared<HittablePdf>(lights, rec.p);
+    MixturePdf mixed_pdf(light_ptr, srec.pdf_ptr);
+
+    RTRay scattered = RTRay(rec.p, mixed_pdf.generate(), r.tm);
+    double pdf_val = mixed_pdf.value(scattered.direction);
+
+    double scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
+
+    if (pdf_val == 0) return color_from_emission;
+
+    return color_from_emission + 
+           (srec.attenuation * scattering_pdf * ray_color(scattered, depth-1, world, lights)) / pdf_val;
 }
 
 int main() {
     const int screenWidth = 600;
     const int screenHeight = 600;
-    const int max_depth = 5;         
+    const int max_depth = 50; 
 
-    InitWindow(screenWidth, screenHeight, "Book 3: Accumulation Buffer");
+    InitWindow(screenWidth, screenHeight, "Ray Tracer Book 3: Final");
     SetTargetFPS(60);
     DisableCursor();
 
@@ -64,18 +80,26 @@ int main() {
     auto white = std::make_shared<Lambertian>(Color3(.73, .73, .73));
     auto green = std::make_shared<Lambertian>(Color3(.12, .45, .15));
     auto light = std::make_shared<DiffuseLight>(Color3(15, 15, 15));
+    
+    auto aluminum = std::make_shared<Metal>(Color3(0.8, 0.85, 0.88), 0.5);
+    auto glass    = std::make_shared<Dielectric>(1.5);
 
     world.add(std::make_shared<Quad>(Point3(555,0,0), Vec3(0,555,0), Vec3(0,0,555), green));
     world.add(std::make_shared<Quad>(Point3(0,0,0), Vec3(0,555,0), Vec3(0,0,555), red));
-    world.add(std::make_shared<Quad>(Point3(343, 554, 332), Vec3(-130,0,0), Vec3(0,0,-105), light));
-    world.add(std::make_shared<Quad>(Point3(0,0,0), Vec3(555,0,0), Vec3(0,0,555), white));
-    world.add(std::make_shared<Quad>(Point3(555,555,555), Vec3(-555,0,0), Vec3(0,0,-555), white));
-    world.add(std::make_shared<Quad>(Point3(0,0,555), Vec3(555,0,0), Vec3(0,555,0), white));
+    world.add(std::make_shared<Quad>(Point3(343, 554, 332), Vec3(-130,0,0), Vec3(0,0,-105), light)); // Лампа
+    world.add(std::make_shared<Quad>(Point3(0,0,0), Vec3(555,0,0), Vec3(0,0,555), white)); // Пол
+    world.add(std::make_shared<Quad>(Point3(555,555,555), Vec3(-555,0,0), Vec3(0,0,-555), white)); // Потолок
+    world.add(std::make_shared<Quad>(Point3(0,0,555), Vec3(555,0,0), Vec3(0,555,0), white)); // Задняя стена
 
-    std::shared_ptr<Hittable> box1 = box(Point3(130, 0, 65), Point3(295, 165, 230), white);
-    std::shared_ptr<Hittable> box2 = box(Point3(265, 0, 295), Point3(430, 330, 460), white);
-    world.add(box1);
+    std::shared_ptr<Hittable> box1 = box(Point3(130, 0, 65), Point3(295, 165, 230), white); // Обычный белый куб
+    
+    world.add(std::make_shared<Sphere>(Point3(190, 90, 190), 90, glass));
+
+    std::shared_ptr<Hittable> box2 = box(Point3(265, 0, 295), Point3(430, 330, 460), aluminum);
     world.add(box2);
+
+    HittableList lights;
+    lights.add(std::make_shared<Quad>(Point3(343, 554, 332), Vec3(-130,0,0), Vec3(0,0,-105), light));
 
     RTCamera cam(
         Point3(278, 278, -800),
@@ -94,35 +118,16 @@ int main() {
     int framesAccumulated = 0;
 
     while (!WindowShouldClose()) {
-        
         double speed = 5.0; 
         double sensitivity = 0.002;
         bool cameraMoved = false;
 
-        if (IsKeyDown(KEY_W)) { 
-            cam.move_forward(speed); 
-            cameraMoved = true; 
-        }
-        if (IsKeyDown(KEY_S)) { 
-            cam.move_forward(-speed); 
-            cameraMoved = true; 
-        }
-        if (IsKeyDown(KEY_A)) { 
-            cam.move_right(-speed); 
-            cameraMoved = true; 
-        }
-        if (IsKeyDown(KEY_D)) { 
-            cam.move_right(speed); 
-            cameraMoved = true; 
-        }
-        if (IsKeyDown(KEY_SPACE)) { 
-            cam.move_up(speed); 
-            cameraMoved = true; 
-        }
-        if (IsKeyDown(KEY_LEFT_SHIFT)) { 
-            cam.move_up(-speed); 
-            cameraMoved = true; 
-        }
+        if (IsKeyDown(KEY_W)) { cam.move_forward(speed); cameraMoved = true; }
+        if (IsKeyDown(KEY_S)) { cam.move_forward(-speed); cameraMoved = true; }
+        if (IsKeyDown(KEY_A)) { cam.move_right(-speed); cameraMoved = true; }
+        if (IsKeyDown(KEY_D)) { cam.move_right(speed); cameraMoved = true; }
+        if (IsKeyDown(KEY_SPACE)) { cam.move_up(speed); cameraMoved = true; }
+        if (IsKeyDown(KEY_LEFT_SHIFT)) { cam.move_up(-speed); cameraMoved = true; }
 
         Vector2 mouseDelta = GetMouseDelta();
         if (mouseDelta.x != 0 || mouseDelta.y != 0) {
@@ -140,17 +145,19 @@ int main() {
         #pragma omp parallel for 
         for (int j = 0; j < screenHeight; ++j) {
             for (int i = 0; i < screenWidth; ++i) {
-                
                 double u = (double(i) + random_double()) / (screenWidth - 1);
                 double v = (double(screenHeight - 1 - j) + random_double()) / (screenHeight - 1);
 
                 RTRay r = cam.get_ray(u, v);
-                Color3 pixel_color = ray_color(r, max_depth, world);
+                Color3 pixel_color = ray_color(r, max_depth, world, lights);
 
                 int pixelIndex = j * screenWidth + i;
                 accumBuffer[pixelIndex] += pixel_color;
-
                 Color3 accumulatedColor = accumBuffer[pixelIndex] / double(framesAccumulated);
+
+                if (accumulatedColor.x != accumulatedColor.x) accumulatedColor = Color3(0,0,0);
+                if (accumulatedColor.y != accumulatedColor.y) accumulatedColor = Color3(0,0,0);
+                if (accumulatedColor.z != accumulatedColor.z) accumulatedColor = Color3(0,0,0);
 
                 auto r_val = sqrt(accumulatedColor.x);
                 auto g_val = sqrt(accumulatedColor.y);
@@ -172,14 +179,7 @@ int main() {
             ClearBackground(BLACK);
             DrawTexture(texture, 0, 0, WHITE);
             DrawFPS(10, 10);
-            
-            DrawText(TextFormat("Quality: %d samples", framesAccumulated), 10, 30, 20, GREEN);
-            
-            if (framesAccumulated < 10) 
-                DrawText("Moving... (Low Res)", 10, 50, 20, RED);
-            else 
-                DrawText("Refining Image...", 10, 50, 20, YELLOW);
-                
+            DrawText(TextFormat("Samples: %d", framesAccumulated), 10, 30, 20, GREEN);
         EndDrawing();
     }
 

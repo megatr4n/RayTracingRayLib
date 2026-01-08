@@ -13,9 +13,11 @@ public:
     RTRay(const Point3& origin, const Vec3& direction, double tm = 0.0)
         : origin(origin), direction(direction), tm(tm) {}
 
+    double time() const { return tm; }
+
     Point3 at(double t) const {
         return origin + t * direction;
     }
 };
 
-#endif 
+#endif
