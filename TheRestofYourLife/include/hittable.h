@@ -33,6 +33,14 @@ public:
     virtual bool hit(const RTRay& r, interval ray_t, HitRecord& rec) const = 0;
 
     virtual AABB bounding_box() const = 0;
+
+    virtual double pdf_value(const Point3& origin, const Vec3& v) const {
+        return 0.0;
+    }
+
+    virtual Vec3 random(const Point3& origin) const {
+        return Vec3(1, 0, 0);
+    }
 };
 
 class Sphere : public Hittable {
@@ -139,6 +147,16 @@ public:
 
     AABB bounding_box() const override {
         return bbox;
+    }
+
+    double pdf_value(const Point3& origin, const Vec3& v) const override {
+        auto weight = 1.0 / objects.size();
+        auto sum = 0.0;
+
+        for (const auto& object : objects)
+            sum += weight * object->pdf_value(origin, v);
+
+        return sum;
     }
 
 private:

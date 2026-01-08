@@ -128,3 +128,4 @@ inline Vec3 random_in_unit_disk() {
             return p;
     }
 }
+
