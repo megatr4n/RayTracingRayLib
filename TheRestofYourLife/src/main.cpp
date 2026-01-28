@@ -108,7 +108,10 @@ int main() {
 
     auto marble_texture = std::make_shared<NoiseTexture>(4.0);
     auto marble_mat = std::make_shared<Lambertian>(marble_texture);
-    world.add(std::make_shared<Sphere>(Point3(190, 90, 190), 90, marble_mat));
+    
+    Point3 center1(190, 90, 190);
+    Point3 center2(190, 150, 190);
+    world.add(std::make_shared<Sphere>(center1, center2, 90, marble_mat));
 
     RTCamera cam(
         Point3(278, 278, -800),
@@ -117,7 +120,7 @@ int main() {
         40.0,
         double(screenWidth)/screenHeight,
         0.0,
-        10.0
+        1.0
     );
 
     Image image = GenImageColor(screenWidth, screenHeight, BLACK);
