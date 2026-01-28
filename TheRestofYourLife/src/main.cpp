@@ -5,7 +5,8 @@
 #include "camera.h"   
 #include "material.h"
 #include "quad.h"
-#include "pdf.h" 
+#include "pdf.h"
+#include "transform.h"
 
 #include <cmath>
 #include <vector>
@@ -91,11 +92,14 @@ int main() {
     world.add(std::make_shared<Quad>(Point3(555,555,555), Vec3(-555,0,0), Vec3(0,0,-555), white)); // Потолок
     world.add(std::make_shared<Quad>(Point3(0,0,555), Vec3(555,0,0), Vec3(0,555,0), white)); // Задняя стена
 
-    std::shared_ptr<Hittable> box1 = box(Point3(130, 0, 65), Point3(295, 165, 230), white); // Обычный белый куб
-    
-    world.add(std::make_shared<Sphere>(Point3(190, 90, 190), 90, glass));
+    std::shared_ptr<Hittable> box1 = box(Point3(0, 0, 0), Point3(165, 330, 165), white);
+    box1 = std::make_shared<RotateY>(box1, 15);
+    box1 = std::make_shared<Translate>(box1, Vec3(265,0,295));
+    world.add(box1);
 
-    std::shared_ptr<Hittable> box2 = box(Point3(265, 0, 295), Point3(430, 330, 460), aluminum);
+    std::shared_ptr<Hittable> box2 = box(Point3(0, 0, 0), Point3(165, 165, 165), aluminum);
+    box2 = std::make_shared<RotateY>(box2, -18); 
+    box2 = std::make_shared<Translate>(box2, Vec3(130,0,65));
     world.add(box2);
 
     HittableList lights;

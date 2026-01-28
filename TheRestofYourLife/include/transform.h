@@ -12,7 +12,7 @@ public:
     }
 
     bool hit(const RTRay& r, interval ray_t, HitRecord& rec) const override {
-        RTRay offset_r(r.origin - offset, r.direction);
+        RTRay offset_r(r.origin - offset, r.direction, r.time());
 
         if (!object->hit(offset_r, ray_t, rec))
             return false;
