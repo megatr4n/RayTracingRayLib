@@ -106,6 +106,10 @@ int main() {
     HittableList lights;
     lights.add(std::make_shared<Quad>(Point3(343, 554, 332), Vec3(-130,0,0), Vec3(0,0,-105), light));
 
+    auto marble_texture = std::make_shared<NoiseTexture>(4.0);
+    auto marble_mat = std::make_shared<Lambertian>(marble_texture);
+    world.add(std::make_shared<Sphere>(Point3(190, 90, 190), 90, marble_mat));
+
     RTCamera cam(
         Point3(278, 278, -800),
         Point3(278, 278, 0),
