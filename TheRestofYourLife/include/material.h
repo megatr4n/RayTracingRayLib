@@ -41,7 +41,23 @@ public:
     double scattering_pdf(const RTRay& r_in, const HitRecord& rec, const RTRay& scattered) const override;
 
 private:
-    std::shared_ptr<RTTexture> tex; 
+    std::shared_ptr<RTTexture> tex;
+};
+
+class Isotropic : public RTMaterial {
+public:
+    Isotropic(Color3 c) : tex(std::make_shared<SolidColor>(c)) {}
+    Isotropic(std::shared_ptr<RTTexture> tex) : tex(tex) {}
+    
+    bool scatter(const RTRay& r_in, const HitRecord& rec, ScatterRecord& srec) const override {
+        srec.attenuation = tex->value(rec.u, rec.v, rec.p);
+        srec.skip_pdf = true;
+        srec.skip_pdf_ray = RTRay(rec.p, random_unit_vector(), r_in.time());
+        return true;
+    }
+
+private:
+    std::shared_ptr<RTTexture> tex;
 };
 
 class Metal : public RTMaterial {
