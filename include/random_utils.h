@@ -2,6 +2,8 @@
 #include "vec3.h"
 #include <cstdlib>
 
+namespace rt {
+
 inline float randomFloat() {
     return rand() / (RAND_MAX + 1.0f);
 }
@@ -34,4 +36,5 @@ inline Vec3 randomInUnitDisk() {
         Vec3 p = {randomFloat(-1,1), randomFloat(-1,1), 0};
         if (p.lengthSq() < 1.0f) return p;
     }
+}
 }

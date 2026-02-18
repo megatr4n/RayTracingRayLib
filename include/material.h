@@ -2,6 +2,7 @@
 #include "vec3.h"
 #include "ray.h"
 
+namespace rt {
 struct HitRecord;
 
 enum class MaterialType { Lambertian, Metal, Dielectric };
@@ -15,3 +16,4 @@ struct Material {
     bool scatter(const Ray& rIn, const HitRecord& rec,
                  Vec3& attenuation, Ray& scattered) const;
 };
+}

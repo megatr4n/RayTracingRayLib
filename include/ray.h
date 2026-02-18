@@ -1,6 +1,8 @@
 #pragma once
 #include "vec3.h"
 
+namespace rt {
+
 struct Ray {
     Vec3 origin;
     Vec3 direction;
@@ -10,3 +12,4 @@ struct Ray {
 
     Vec3 at(float t) const { return origin + direction * t; }
 };
+}

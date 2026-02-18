@@ -3,6 +3,7 @@
 #include "material.h"
 #include <vector>
 
+namespace rt {
 struct HitRecord {
     Vec3     p;
     Vec3     normal;
@@ -26,3 +27,4 @@ struct Scene {
 
     bool hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const;
 };
+}

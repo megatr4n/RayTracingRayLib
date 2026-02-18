@@ -2,24 +2,51 @@
 #include <cmath>
 #include <raylib.h>
 
+namespace rt {
+
 struct Vec3 {
     float x, y, z;
 
     Vec3() : x(0), y(0), z(0) {}
     Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
 
-    Vec3 operator+(const Vec3& o) const { return {x+o.x, y+o.y, z+o.z}; }
-    Vec3 operator-(const Vec3& o) const { return {x-o.x, y-o.y, z-o.z}; }
-    Vec3 operator*(float t)       const { return {x*t, y*t, z*t}; }
-    Vec3 operator*(const Vec3& o) const { return {x*o.x, y*o.y, z*o.z}; }
-    Vec3 operator/(float t)       const { return {x/t, y/t, z/t}; }
-    Vec3 operator-()              const { return {-x, -y, -z}; }
+    Vec3 operator+(const Vec3& o) const { 
+        return {x+o.x, y+o.y, z+o.z}; 
+    }
+    Vec3 operator-(const Vec3& o) const { 
+        return {x-o.x, y-o.y, z-o.z}; 
+    }
+    Vec3 operator*(float t) const { 
+        return {x*t, y*t, z*t}; 
+    }
+    Vec3 operator*(const Vec3& o) const { 
+        return {x*o.x, y*o.y, z*o.z}; 
+    }
+    Vec3 operator/(float t) const { 
+        return {x/t, y/t, z/t}; 
+    }
+    Vec3 operator-() const { 
+        return {-x, -y, -z}; 
+    }
 
-    Vec3& operator+=(const Vec3& o) { x+=o.x; y+=o.y; z+=o.z; return *this; }
-    Vec3& operator*=(float t)       { x*=t; y*=t; z*=t; return *this; }
-
-    float lengthSq() const { return x*x + y*y + z*z; }
-    float length()   const { return std::sqrt(lengthSq()); }
+    Vec3& operator+=(const Vec3& o) { 
+        x+=o.x; y+=o.y; z+=o.z; 
+        return *this; 
+    }
+    Vec3& operator*=(float t) { 
+        x*=t; y*=t; z*=t; 
+        return *this; 
+    }
+    Vec3& operator-=(const Vec3& o) { 
+        x-=o.x; y-=o.y; z-=o.z; 
+        return *this; 
+    }
+    float lengthSq() const { 
+        return x*x + y*y + z*z; 
+    }
+    float length()   const { 
+        return std::sqrt(lengthSq()); 
+    }
 
     bool nearZero() const {
         const float s = 1e-8f;
@@ -66,4 +93,5 @@ inline Vec3 refract(const Vec3& uv, const Vec3& n, float etaiOverEtat) {
     Vec3 rOutPerp  = etaiOverEtat * (uv + cosTheta * n);
     Vec3 rOutPar   = -std::sqrt(std::fabs(1.0f - rOutPerp.lengthSq())) * n;
     return rOutPerp + rOutPar;
+}
 }
