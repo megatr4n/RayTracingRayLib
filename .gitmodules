@@ -1,9 +1,9 @@
 [submodule "external/raylib"]
-	path = external/raylib
+	path = realtime/external/raylib
 	url = https://github.com/raysan5/raylib.git
 [submodule "external/imgui"]
-	path = external/imgui
+	path = realtime/external/imgui
 	url = https://github.com/ocornut/imgui.git
 [submodule "external/rlImGui"]
-	path = external/rlImGui
+	path = realtime/external/rlImGui
 	url = https://github.com/raylib-extras/rlImGui.git
