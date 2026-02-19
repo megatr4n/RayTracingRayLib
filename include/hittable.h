@@ -22,8 +22,23 @@ struct Sphere {
     bool hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const;
 };
 
+struct Quad {
+    Vec3 Q;
+    Vec3 u;
+    Vec3 v;
+    Material mat;
+
+    Vec3 normal;
+    float D;
+    Vec3 w;
+
+    void init(Vec3 _Q, Vec3 _u, Vec3 _v, Material _mat);
+    bool hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const;
+};
+
 struct Scene {
     std::vector<Sphere> spheres;
+    std::vector<Quad>   quads;
 
     bool hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const;
 };

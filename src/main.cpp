@@ -84,49 +84,57 @@ int main() {
     renderer.init(&scene);
 
     while (!WindowShouldClose()) {
-        renderer.update(GetFrameTime());
+      renderer.update(GetFrameTime());
+      renderer.renderSample();
 
-        renderer.renderSample();
-        if (renderer.isPreview) {
+      BeginDrawing();
+      ClearBackground(BLACK);
+
+      Rectangle srcRect = { 0, 0, (float)renderer.outputTex.width, -(float)renderer.outputTex.height };
+      Rectangle destRect = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
+      DrawTexturePro(renderer.outputTex, srcRect, destRect, {0,0}, 0.0f, WHITE);
+
+      if (!renderer.isRendering) {
           Camera3D rlCam = ConvertCamera(renderer.camParams);
           BeginMode3D(rlCam);
-              
+            
               DrawGrid(20, 1.0f);
 
               for (const auto& s : scene.spheres) {
                   Vector3 center = { s.center.x, s.center.y, s.center.z };
                   Vector3 size = { s.radius * 2.0f, s.radius * 2.0f, s.radius * 2.0f };
-                  DrawCubeWiresV(center, size, WHITE);
+                  DrawCubeWiresV(center, size, GREEN);
+              }
+
+              for (const auto& q : scene.quads) {
+                  Vector3 p1 = {q.Q.x, q.Q.y, q.Q.z};
+                  Vector3 p2 = {q.Q.x + q.u.x, q.Q.y + q.u.y, q.Q.z + q.u.z};
+                  Vector3 p3 = {q.Q.x + q.u.x + q.v.x, q.Q.y + q.u.y + q.v.y, q.Q.z + q.u.z + q.v.z};
+                  Vector3 p4 = {q.Q.x + q.v.x, q.Q.y + q.v.y, q.Q.z + q.v.z};
+                  DrawLine3D(p1, p2, GREEN);
+                  DrawLine3D(p2, p3, GREEN);
+                  DrawLine3D(p3, p4, GREEN);
+                  DrawLine3D(p4, p1, GREEN);
               }
 
           EndMode3D();
-          
-          DrawText("PREVIEW MODE (WASD to Fly)", 10, 10, 20, GREEN);
+        
+          DrawText("PREVIEW MODE (TAB to toggle cursor, WASD to Fly)", 10, 10, 20, GREEN);
       } else {
-           DrawText(TextFormat("Rendering... Sample: %d", renderer.samplesDone), 10, 10, 20, ORANGE);
+          DrawText(TextFormat("Rendering... Sample: %d", renderer.samplesDone), 10, 10, 20, ORANGE);
       }
 
-        BeginDrawing();
-        ClearBackground(BLACK);
+      rlImGuiBegin();
+      ImGui::SetNextWindowPos ({(float)(GetScreenWidth()-340), 0}, ImGuiCond_Always);
+      ImGui::SetNextWindowSize({340, (float)GetScreenHeight()},    ImGuiCond_Always);
+      
+      if (drawUI(renderer, scene)) {
+          renderer.reset();
+      }
+      rlImGuiEnd();
 
-        int   panelW = GetScreenWidth() - 340;
-        int   panelH = GetScreenHeight();
-        float scale  = std::min((float)panelW / renderer.settings.width,
-                                (float)panelH / renderer.settings.height);
-        int dw = (int)(renderer.settings.width  * scale);
-        int dh = (int)(renderer.settings.height * scale);
-        Rectangle srcRect = { 0, 0, (float)renderer.outputTex.width, -(float)renderer.outputTex.height };
-        Rectangle destRect = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
-        DrawTexturePro(renderer.outputTex, srcRect, destRect, {0,0}, 0.0f, WHITE);
-
-        rlImGuiBegin();
-        ImGui::SetNextWindowPos ({(float)(GetScreenWidth()-340), 0}, ImGuiCond_Always);
-        ImGui::SetNextWindowSize({340, (float)GetScreenHeight()},    ImGuiCond_Always);
-        if (drawUI(renderer, scene)) renderer.reset();
-        rlImGuiEnd();
-
-        EndDrawing();
-    }
+      EndDrawing();
+  }
 
     rlImGuiShutdown();
     UnloadTexture(renderer.outputTex);
