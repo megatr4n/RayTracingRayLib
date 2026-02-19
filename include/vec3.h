@@ -10,6 +10,9 @@ struct Vec3 {
     Vec3() : x(0), y(0), z(0) {}
     Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
 
+    float operator[](int i) const { return (&x)[i]; }
+    float& operator[](int i) { return (&x)[i]; }
+
     Vec3 operator+(const Vec3& o) const { 
         return {x+o.x, y+o.y, z+o.z}; 
     }
@@ -94,4 +97,6 @@ inline Vec3 refract(const Vec3& uv, const Vec3& n, float etaiOverEtat) {
     Vec3 rOutPar   = -std::sqrt(std::fabs(1.0f - rOutPerp.lengthSq())) * n;
     return rOutPerp + rOutPar;
 }
+
+
 }
