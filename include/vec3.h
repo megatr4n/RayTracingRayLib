@@ -69,6 +69,17 @@ struct Vec3 {
             255
         };
     }
+    Vec3 rotateY(float angle_degrees) const {
+        float radians = angle_degrees * (M_PI / 180.0f);
+        float sin_theta = std::sin(radians);
+        float cos_theta = std::cos(radians);
+
+        return Vec3(
+            cos_theta * x + sin_theta * z,
+            y,
+            -sin_theta * x + cos_theta * z
+        );
+    }
 };
 
 inline Vec3 operator*(float t, const Vec3& v) { return v * t; }
@@ -97,6 +108,7 @@ inline Vec3 refract(const Vec3& uv, const Vec3& n, float etaiOverEtat) {
     Vec3 rOutPar   = -std::sqrt(std::fabs(1.0f - rOutPerp.lengthSq())) * n;
     return rOutPerp + rOutPar;
 }
+
 
 
 }

@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "renderer.h"
 #include "random_utils.h"
+#include "texture.h"
 #include <imgui.h>
 #include <string>
 #include <vector>
@@ -58,31 +59,38 @@ namespace rt
         cam.focusDist = 10.0f;
     }
 
-    void addBox(Scene &scene, Vec3 p0, Vec3 p1, Material mat)
+    void addBox(Scene &scene, Vec3 p0, Vec3 p1, Material mat, float angleY = 0.0f)
     {
         Vec3 min = {std::fmin(p0.x, p1.x), std::fmin(p0.y, p1.y), std::fmin(p0.z, p1.z)};
         Vec3 max = {std::fmax(p0.x, p1.x), std::fmax(p0.y, p1.y), std::fmax(p0.z, p1.z)};
 
+        Vec3 center = (min + max) * 0.5f;
         Vec3 dx = {max.x - min.x, 0, 0};
         Vec3 dy = {0, max.y - min.y, 0};
         Vec3 dz = {0, 0, max.z - min.z};
 
-        Quad q;
-        q.init({min.x, min.y, max.z}, dx, dy, mat);
-        scene.quads.push_back(q);
-        q.init({max.x, min.y, min.z}, -dx, dy, mat);
-        scene.quads.push_back(q);
-        q.init({min.x, max.y, max.z}, dx, -dz, mat);
-        scene.quads.push_back(q);
-        q.init({min.x, min.y, min.z}, dx, dz, mat);
-        scene.quads.push_back(q);
-        q.init({max.x, min.y, max.z}, -dz, dy, mat);
-        scene.quads.push_back(q);
-        q.init({min.x, min.y, min.z}, dz, dy, mat);
-        scene.quads.push_back(q);
+        auto addRotatedQuad = [&](Vec3 Q, Vec3 u, Vec3 v)
+        {
+            if (angleY != 0.0f)
+            {
+                Q = (Q - center).rotateY(angleY) + center;
+                u = u.rotateY(angleY);
+                v = v.rotateY(angleY);
+            }
+            Quad q;
+            q.init(Q, u, v, mat);
+            scene.quads.push_back(q);
+        };
+
+        addRotatedQuad({min.x, min.y, max.z}, dx, dy);
+        addRotatedQuad({max.x, min.y, min.z}, -dx, dy);
+        addRotatedQuad({min.x, max.y, max.z}, dx, -dz);
+        addRotatedQuad({min.x, min.y, min.z}, dx, dz);
+        addRotatedQuad({max.x, min.y, max.z}, -dz, dy);
+        addRotatedQuad({min.x, min.y, min.z}, dz, dy);
     }
 
-    void createCornellBox(Scene &scene, RtCameraParams &cam)
+    void createCornellBox(Scene &scene, RtCameraParams &cam, float angle1 = 15.0f, float angle2 = -18.0f)
     {
         scene.spheres.clear();
         scene.quads.clear();
@@ -100,14 +108,15 @@ namespace rt
         q.init({0, 0, 0}, {555, 0, 0}, {0, 0, 555}, white);
         scene.quads.push_back(q);
         q.init({555, 555, 555}, {-555, 0, 0}, {0, 0, -555}, white);
-        scene.quads.push_back(q); 
+        scene.quads.push_back(q);
         q.init({0, 0, 555}, {555, 0, 0}, {0, 555, 0}, white);
-        scene.quads.push_back(q); 
+        scene.quads.push_back(q);
 
         q.init({343, 554, 332}, {-130, 0, 0}, {0, 0, -105}, light);
         scene.quads.push_back(q);
 
-        addBox(scene, {265, 0, 295}, {430, 330, 460}, white);
+        addBox(scene, {265, 0, 295}, {430, 330, 460}, white, angle1);
+        addBox(scene, {130, 0, 65}, {295, 165, 230}, white, angle2);
         scene.spheres.push_back({{190, 90, 190}, 90, {MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f}});
 
         cam.lookFrom = {278, 278, -800};
@@ -162,10 +171,30 @@ namespace rt
             if (ImGui::Button("Cornell Box", ImVec2(150, 0)))
             {
                 createCornellBox(scene, renderer.camParams);
-
+                scene.buildBVH();
                 renderer.camera.init(renderer.camParams);
                 renderer.reset();
             }
+
+            ImGui::Separator();
+            ImGui::Text("Cornell Box Rotation:");
+
+            static float box1Angle = 15.0f;
+            static float box2Angle = -18.0f;
+            bool rebuildBox = false;
+
+            if (ImGui::SliderFloat("Tall Box Angle", &box1Angle, -180.0f, 180.0f))
+                rebuildBox = true;
+            if (ImGui::SliderFloat("Short Box Angle", &box2Angle, -180.0f, 180.0f))
+                rebuildBox = true;
+
+            if (rebuildBox)
+            {
+                createCornellBox(scene, renderer.camParams, box1Angle, box2Angle);
+                scene.buildBVH();
+                renderer.reset();
+            }
+
             ImGui::Separator();
         }
 
@@ -218,6 +247,25 @@ namespace rt
                     if (s.mat.type == MaterialType::Dielectric)
                         changed |= ImGui::SliderFloat("IOR", &s.mat.ior, 1.0f, 3.0f);
 
+                    ImGui::Separator();
+                    bool useChecker = (s.mat.tex != nullptr);
+                    if (ImGui::Checkbox("Checkerboard Texture", &useChecker))
+                    {
+                        if (useChecker)
+                        {
+                            s.mat.tex = std::make_shared<rt::CheckerTexture>(
+                                2.0f,
+                                rt::Vec3(0.2f, 0.3f, 0.1f),
+                                rt::Vec3(0.9f, 0.9f, 0.9f));
+                        }
+                        else
+                        {
+                            s.mat.tex = nullptr;
+                        }
+                        changed = true;
+                    }
+                    ImGui::Separator();
+
                     if (ImGui::Button("Remove"))
                     {
                         scene.spheres.erase(scene.spheres.begin() + i);
@@ -248,7 +296,8 @@ namespace rt
 
         ImGui::End();
 
-        if (changed) {
+        if (changed)
+        {
             scene.buildBVH();
         }
         return changed;

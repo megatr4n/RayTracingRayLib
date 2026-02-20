@@ -37,7 +37,7 @@ namespace rt
                 scatter_dir = rec.normal;
             }
             scattered = Ray(rec.p, scatter_dir);
-            attenuation = albedo;
+            attenuation = tex ? tex->value(0.0f, 0.0f, rec.p) : albedo;
             return true;
         }
 
@@ -45,7 +45,7 @@ namespace rt
         {
             Vec3 reflected = reflect(normalize(rIn.direction), rec.normal);
             scattered = Ray(rec.p, reflected + fuzz * randomInUnitSphere());
-            attenuation = albedo;
+            attenuation = tex ? tex->value(0.0f, 0.0f, rec.p) : albedo;
             return (dot(scattered.direction, rec.normal) > 0);
         }
 

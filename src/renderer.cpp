@@ -173,7 +173,7 @@ namespace rt
         Ray scattered;
         Vec3 attenuation;
 
-        Vec3 emitted = rec.mat.emitted();
+        Vec3 emitted = rec.mat.emitted(0.0f, 0.0f, rec.p);
 
         Vec3 unit = normalize(r.direction);
         if (rec.mat.scatter(r, rec, attenuation, scattered))
