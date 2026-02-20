@@ -77,7 +77,7 @@ struct Scene {
 
     BvhNode* bvhRoot = nullptr;
 
-    ~Scene() { delete bvhRoot; }
+    ~Scene();
     void buildBVH();             
     bool hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const;
 };

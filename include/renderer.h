@@ -4,6 +4,10 @@
 #include <vector>
 #include <raylib.h>
 
+#include <taskflow/taskflow.hpp>
+
+#include <taskflow/algorithm/for_each.hpp>
+
 namespace rt {
 
 struct RendererSettings {
@@ -17,6 +21,8 @@ struct RendererSettings {
 
 class Renderer {
 public:
+    tf::Executor executor; 
+
     RendererSettings settings;
     RtCameraParams   camParams;
     Scene* scene       = nullptr;

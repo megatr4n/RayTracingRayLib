@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(RealTimeRaytracer CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Threads REQUIRED)
 
 set(IMGUI_DIR   ${CMAKE_SOURCE_DIR}/external/imgui)
 set(RLIMGUI_DIR ${CMAKE_SOURCE_DIR}/external/rlImGui)
@@ -20,14 +22,12 @@ add_library(imgui STATIC
 )
 target_include_directories(imgui PUBLIC ${IMGUI_DIR})
 
-# rlImGui
 add_library(rlimgui STATIC
     ${RLIMGUI_DIR}/rlImGui.cpp
 )
 target_include_directories(rlimgui PUBLIC ${RLIMGUI_DIR})
 target_link_libraries(rlimgui PUBLIC raylib imgui)
 
-# Main
 add_executable(raytracer
     src/main.cpp
     src/material.cpp
@@ -41,7 +41,7 @@ target_include_directories(raytracer PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(raytracer PRIVATE raylib imgui rlimgui)
+target_link_libraries(raytracer PRIVATE raylib imgui rlimgui Threads::Threads)
 
 if(APPLE)
     find_library(COCOA Cocoa)

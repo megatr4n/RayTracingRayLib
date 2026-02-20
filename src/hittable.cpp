@@ -75,6 +75,10 @@ namespace rt
         return true;
     }
 
+    Scene::~Scene() {
+        delete bvhRoot;
+    }
+
     void Scene::buildBVH()
     {
         delete bvhRoot;

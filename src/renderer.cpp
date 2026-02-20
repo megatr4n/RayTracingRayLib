@@ -43,7 +43,7 @@ namespace rt
             UnloadTexture(outputTex);
         Image img = GenImageColor(w, h, BLACK);
         outputTex = LoadTextureFromImage(img);
-        
+
         UnloadImage(img);
 
         SetTextureFilter(outputTex, TEXTURE_FILTER_BILINEAR);
@@ -190,17 +190,26 @@ namespace rt
         if (!isRendering)
         {
             samplesDone = 1;
-#pragma omp parallel for schedule(dynamic)
-            for (int j = 0; j < H; ++j)
-            {
-                for (int i = 0; i < W; ++i)
-                {
+            int step = 2;
+
+            tf::Taskflow taskflow;
+            taskflow.for_each_index(0, H, step, [&](int j)
+                                    {
+                for (int i = 0; i < W; i += step) {
                     float u = (i + 0.5f) / (W - 1);
                     float v = (j + 0.5f) / (H - 1);
                     Ray r = camera.getRay(u, v);
-                    accumBuffer[j * W + i] = tracePreview(r);
-                }
-            }
+                    Vec3 color = tracePreview(r);
+    
+                    for (int dy = 0; dy < step && (j + dy) < H; ++dy) {
+                        for (int dx = 0; dx < step && (i + dx) < W; ++dx) {
+                            accumBuffer[(j + dy) * W + (i + dx)] = color;
+                        }
+                    }
+                } });
+
+            executor.run(taskflow).wait();
+
             uploadPixels();
             return;
         }
@@ -208,23 +217,19 @@ namespace rt
         if (samplesDone >= settings.samplesTarget)
             return;
 
-#pragma omp parallel for schedule(dynamic)
-        for (int j = 0; j < H; ++j)
-        {
-            for (int i = 0; i < W; ++i)
-            {
-                float u = (i + 0.5f) / (W - 1);
-                float v = (j + 0.5f) / (H - 1);
+        tf::Taskflow taskflow;
+        taskflow.for_each_index(0, H, 1, [&](int j)
+                                {
+            for (int i = 0; i < W; ++i) {
+                float u = (i + randomFloat()) / (W - 1);
+                float v = (j + randomFloat()) / (H - 1);
+                
                 Ray r = camera.getRay(u, v);
-                Vec3 pixelColor = traceRay(r, settings.maxBounces);
+                accumBuffer[j * W + i] += traceRay(r, settings.maxBounces);
+            } });
 
-                int idx = j * W + i;
-                if (samplesDone == 0)
-                    accumBuffer[idx] = pixelColor;
-                else
-                    accumBuffer[idx] += pixelColor;
-            }
-        }
+        executor.run(taskflow).wait();
+
         samplesDone++;
         uploadPixels();
     }
