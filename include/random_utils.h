@@ -1,11 +1,14 @@
 #pragma once
 #include "vec3.h"
 #include <cstdlib>
+#include <random>
 
 namespace rt {
 
 inline float randomFloat() {
-    return rand() / (RAND_MAX + 1.0f);
+    thread_local std::mt19937 generator(std::random_device{}());
+    std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+    return distribution(generator);
 }
 
 inline float randomFloat(float min, float max) {

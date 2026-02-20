@@ -54,7 +54,7 @@ namespace rt
         cam.lookFrom = {13, 2, 3};
         cam.lookAt = {0, 0, 0};
         cam.vfov = 20.0f;
-        cam.aperture = 0.1f;
+        cam.aperture = 0.0f;
         cam.focusDist = 10.0f;
     }
 
@@ -154,6 +154,7 @@ namespace rt
             if (ImGui::Button("Random Spheres", ImVec2(150, 0)))
             {
                 createRandomScene(scene, renderer.camParams);
+                scene.buildBVH();
                 renderer.camera.init(renderer.camParams);
                 renderer.reset();
             }
@@ -246,6 +247,10 @@ namespace rt
             ImGui::EndDisabled();
 
         ImGui::End();
+
+        if (changed) {
+            scene.buildBVH();
+        }
         return changed;
     }
 

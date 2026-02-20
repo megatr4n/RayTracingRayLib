@@ -43,7 +43,10 @@ namespace rt
             UnloadTexture(outputTex);
         Image img = GenImageColor(w, h, BLACK);
         outputTex = LoadTextureFromImage(img);
+        
         UnloadImage(img);
+
+        SetTextureFilter(outputTex, TEXTURE_FILTER_BILINEAR);
 
         reset();
     }
@@ -155,12 +158,14 @@ namespace rt
         HitRecord rec;
         if (!scene->hit(r, 0.001f, 1e9f, rec))
         {
-            if (scene->quads.empty()) {
+            if (scene->quads.empty())
+            {
                 Vec3 unit = normalize(r.direction);
                 float t = 0.5f * (unit.y + 1.0f);
                 return (1.0f - t) * Vec3{1.0f, 1.0f, 1.0f} + t * Vec3{0.5f, 0.7f, 1.0f};
             }
-            else { 
+            else
+            {
                 return {0, 0, 0};
             }
         }
@@ -208,8 +213,8 @@ namespace rt
         {
             for (int i = 0; i < W; ++i)
             {
-                float u = (i + randomFloat()) / (W - 1);
-                float v = (j + randomFloat()) / (H - 1);
+                float u = (i + 0.5f) / (W - 1);
+                float v = (j + 0.5f) / (H - 1);
                 Ray r = camera.getRay(u, v);
                 Vec3 pixelColor = traceRay(r, settings.maxBounces);
 

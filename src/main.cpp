@@ -65,15 +65,18 @@ Camera3D ConvertCamera(const RtCameraParams& params) {
 }
 
 int main() {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
     InitWindow(1280, 720, "Real-Time Raytracer | raylib + ImGui");
     SetTargetFPS(60);
     rlImGuiSetup(true);
 
     Scene    scene = buildScene();
+
+    scene.buildBVH();
+
     Renderer renderer;
-    renderer.settings.width         = 800;
-    renderer.settings.height        = 450;
+    renderer.settings.width         = 1280;
+    renderer.settings.height        = 720;
     renderer.settings.maxBounces    = 8;
     renderer.settings.samplesTarget = 256;
     renderer.camParams.vfov         = 20.0f;
