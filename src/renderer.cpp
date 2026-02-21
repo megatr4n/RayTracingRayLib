@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <raymath.h>
+#include <rlgl.h>
 
 namespace rt
 {
@@ -146,6 +147,9 @@ namespace rt
         HitRecord rec;
         if (scene->hit(r, 0.001f, 1e9f, rec))
         {
+            if (rec.mat.tex != nullptr) {
+                return rec.mat.tex->value(rec.u, rec.v, rec.p);
+            }
             return rec.mat.albedo;
         }
         return Vec3(0.15f, 0.15f, 0.15f);
@@ -173,7 +177,7 @@ namespace rt
         Ray scattered;
         Vec3 attenuation;
 
-        Vec3 emitted = rec.mat.emitted(0.0f, 0.0f, rec.p);
+        Vec3 emitted = rec.mat.emitted(rec.u, rec.v, rec.p);
 
         Vec3 unit = normalize(r.direction);
         if (rec.mat.scatter(r, rec, attenuation, scattered))
@@ -189,29 +193,7 @@ namespace rt
 
         if (!isRendering)
         {
-            samplesDone = 1;
-            int step = 2;
-
-            tf::Taskflow taskflow;
-            taskflow.for_each_index(0, H, step, [&](int j)
-                                    {
-                for (int i = 0; i < W; i += step) {
-                    float u = (i + 0.5f) / (W - 1);
-                    float v = (j + 0.5f) / (H - 1);
-                    Ray r = camera.getRay(u, v);
-                    Vec3 color = tracePreview(r);
-    
-                    for (int dy = 0; dy < step && (j + dy) < H; ++dy) {
-                        for (int dx = 0; dx < step && (i + dx) < W; ++dx) {
-                            accumBuffer[(j + dy) * W + (i + dx)] = color;
-                        }
-                    }
-                } });
-
-            executor.run(taskflow).wait();
-
-            uploadPixels();
-            return;
+            return; 
         }
 
         if (samplesDone >= settings.samplesTarget)
@@ -254,4 +236,68 @@ namespace rt
         UpdateTexture(outputTex, pixels.data());
     }
 
+    void Renderer::drawRaylibPreview()
+    {
+        if (scene == nullptr) return; 
+
+        Camera3D cam = { 0 };
+        cam.position = { camParams.lookFrom.x, camParams.lookFrom.y, camParams.lookFrom.z };
+        
+        float yawRad = camParams.yaw * (3.14159265f / 180.0f);
+        float pitchRad = camParams.pitch * (3.14159265f / 180.0f);
+        Vec3 forward;
+        forward.x = std::cos(yawRad) * std::cos(pitchRad);
+        forward.y = std::sin(pitchRad);
+        forward.z = std::sin(yawRad) * std::cos(pitchRad);
+        
+        cam.target = { cam.position.x + forward.x, cam.position.y + forward.y, cam.position.z + forward.z };
+        cam.up = { 0.0f, 1.0f, 0.0f };
+        cam.fovy = camParams.vfov;
+        cam.projection = CAMERA_PERSPECTIVE;
+
+        BeginMode3D(cam);
+
+        for (const auto& s : scene->spheres) {
+            Color col = { 
+                (unsigned char)(s.mat.albedo.x * 255.0f), 
+                (unsigned char)(s.mat.albedo.y * 255.0f), 
+                (unsigned char)(s.mat.albedo.z * 255.0f), 255 
+            };
+            Vector3 center = { s.center.x, s.center.y, s.center.z };
+            Vector3 size = { s.radius * 2.0f, s.radius * 2.0f, s.radius * 2.0f };
+            
+            DrawSphere(center, s.radius, col);
+            DrawSphereWires(center, s.radius * 1.01f, 16, 16, ColorAlpha(GREEN, 0.6f));
+            DrawCubeWiresV(center, size, ColorAlpha(GREEN, 0.9f));
+        }
+
+        for (const auto& q : scene->quads) {
+            rt::Vec3 normal = rt::normalize(rt::cross(q.u, q.v));
+            rt::Vec3 lightDir = rt::normalize(rt::Vec3{0.5f, 1.0f, -0.8f});
+            float diffuse = std::max(0.4f, rt::dot(normal, lightDir));
+
+            Color col = { 
+                (unsigned char)(q.mat.albedo.x * diffuse * 255.0f), 
+                (unsigned char)(q.mat.albedo.y * diffuse * 255.0f), 
+                (unsigned char)(q.mat.albedo.z * diffuse * 255.0f), 255 
+            };
+            
+            Vector3 p1 = { q.Q.x, q.Q.y, q.Q.z };
+            Vector3 p2 = { q.Q.x + q.u.x, q.Q.y + q.u.y, q.Q.z + q.u.z };
+            Vector3 p3 = { q.Q.x + q.u.x + q.v.x, q.Q.y + q.u.y + q.v.y, q.Q.z + q.u.z + q.v.z };
+            Vector3 p4 = { q.Q.x + q.v.x, q.Q.y + q.v.y, q.Q.z + q.v.z };
+
+            DrawTriangle3D(p1, p2, p3, col);
+            DrawTriangle3D(p1, p3, p4, col);
+            DrawTriangle3D(p1, p3, p2, col);
+            DrawTriangle3D(p1, p4, p3, col);
+
+            DrawLine3D(p1, p2, GREEN);
+            DrawLine3D(p2, p3, GREEN);
+            DrawLine3D(p3, p4, GREEN);
+            DrawLine3D(p4, p1, GREEN);
+        }
+
+        EndMode3D();
+    }
 }

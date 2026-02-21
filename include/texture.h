@@ -1,7 +1,11 @@
 #pragma once
+#include "stb_image.h"
 #include "vec3.h"
 #include <memory>
 #include <cmath>
+
+#include <iostream>
+#include <algorithm>
 
 namespace rt {
 
@@ -48,4 +52,45 @@ private:
     std::shared_ptr<Texture> odd;
 };
 
-} // namespace rt
+class ImageTexture : public Texture {
+public:
+    ImageTexture(const char* filename) {
+        int components_per_pixel = 3; 
+        data = stbi_load(filename, &width, &height, &bytes_per_pixel, components_per_pixel);
+        if (!data) {
+            std::cerr << "ERROR: Could not load texture image file '" << filename << "'.\n";
+            width = height = 0;
+        }
+        bytes_per_pixel = components_per_pixel;
+    }
+
+    ~ImageTexture() {
+        if (data) stbi_image_free(data); 
+    }
+
+    Vec3 value(float u, float v, const Vec3& p) const override {
+        if (data == nullptr) return Vec3(1.0f, 0.0f, 1.0f);
+
+        u = std::clamp(u, 0.0f, 1.0f);
+        v = 1.0f - std::clamp(v, 0.0f, 1.0f); 
+
+        auto i = static_cast<int>(u * width);
+        auto j = static_cast<int>(v * height);
+
+        if (i >= width)  i = width - 1;
+        if (j >= height) j = height - 1;
+
+        const float color_scale = 1.0f / 255.0f;
+        auto pixel = data + j * bytes_per_pixel * width + i * bytes_per_pixel;
+
+        return Vec3(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
+    }
+
+private:
+    unsigned char* data;
+    int width, height;
+    int bytes_per_pixel;
+};
+
+} 
+

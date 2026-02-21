@@ -37,7 +37,7 @@ namespace rt
                 scatter_dir = rec.normal;
             }
             scattered = Ray(rec.p, scatter_dir);
-            attenuation = tex ? tex->value(0.0f, 0.0f, rec.p) : albedo;
+            attenuation = tex ? tex->value(rec.u, rec.v, rec.p) : albedo;
             return true;
         }
 

@@ -20,9 +20,9 @@ namespace rt
         scene.spheres.push_back({{-4, 1, 0}, 1, {MaterialType::Lambertian, {0.4f, 0.2f, 0.1f}}});
         scene.spheres.push_back({{4, 1, 0}, 1, {MaterialType::Metal, {0.7f, 0.6f, 0.5f}, {0, 0, 0}, 0.0f}});
 
-        for (int a = -11; a < 11; a++)
+        for (int a = -5; a < 5; a++)
         {
-            for (int b = -11; b < 11; b++)
+            for (int b = -5; b < 5; b++)
             {
                 float choose_mat = randomFloat();
                 Vec3 center = {a + 0.9f * randomFloat(), 0.2f, b + 0.9f * randomFloat()};
@@ -57,6 +57,10 @@ namespace rt
         cam.vfov = 20.0f;
         cam.aperture = 0.0f;
         cam.focusDist = 10.0f;
+
+        Vec3 dir = normalize(cam.lookAt - cam.lookFrom);
+        cam.pitch = std::asin(dir.y) * (180.0f / 3.14159265f);
+        cam.yaw = std::atan2(dir.z, dir.x) * (180.0f / 3.14159265f);
     }
 
     void addBox(Scene &scene, Vec3 p0, Vec3 p1, Material mat, float angleY = 0.0f)
@@ -247,24 +251,23 @@ namespace rt
                     if (s.mat.type == MaterialType::Dielectric)
                         changed |= ImGui::SliderFloat("IOR", &s.mat.ior, 1.0f, 3.0f);
 
-                    ImGui::Separator();
-                    bool useChecker = (s.mat.tex != nullptr);
-                    if (ImGui::Checkbox("Checkerboard Texture", &useChecker))
-                    {
-                        if (useChecker)
-                        {
+                        ImGui::Separator();
+                        ImGui::Text("Textures:");
+                        if (ImGui::Button("Apply Checkerboard")) {
                             s.mat.tex = std::make_shared<rt::CheckerTexture>(
-                                2.0f,
-                                rt::Vec3(0.2f, 0.3f, 0.1f),
-                                rt::Vec3(0.9f, 0.9f, 0.9f));
+                                2.0f, rt::Vec3(0.2f, 0.3f, 0.1f), rt::Vec3(0.9f, 0.9f, 0.9f)
+                            );
+                            changed = true;
                         }
-                        else
-                        {
-                            s.mat.tex = nullptr;
+                        if (ImGui::Button("Apply 'earth.jpg'")) {
+                            s.mat.tex = std::make_shared<rt::ImageTexture>("/Users/daniilpanasiuk/Desktop/RayTracingRayLib-4/earth.jpg");
+                            changed = true;
                         }
-                        changed = true;
-                    }
-                    ImGui::Separator();
+                        if (ImGui::Button("Clear Texture")) {
+                            s.mat.tex = nullptr; 
+                            changed = true;
+                        }
+                        ImGui::Separator();
 
                     if (ImGui::Button("Remove"))
                     {

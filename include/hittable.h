@@ -9,7 +9,9 @@ struct HitRecord {
     Vec3     p;
     Vec3     normal;
     Material mat;
-    float    t         = 0;
+    float    t = 0;
+    float    u;
+    float    v;
     bool     frontFace = true;
 
     void setFaceNormal(const Ray& r, const Vec3& outwardNormal);

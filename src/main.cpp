@@ -93,38 +93,15 @@ int main() {
       BeginDrawing();
       ClearBackground(BLACK);
 
-      Rectangle srcRect = { 0, 0, (float)renderer.outputTex.width, -(float)renderer.outputTex.height };
-      Rectangle destRect = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
-      DrawTexturePro(renderer.outputTex, srcRect, destRect, {0,0}, 0.0f, WHITE);
-
-      if (!renderer.isRendering) {
-          Camera3D rlCam = ConvertCamera(renderer.camParams);
-          BeginMode3D(rlCam);
-            
-              DrawGrid(20, 1.0f);
-
-              for (const auto& s : scene.spheres) {
-                  Vector3 center = { s.center.x, s.center.y, s.center.z };
-                  Vector3 size = { s.radius * 2.0f, s.radius * 2.0f, s.radius * 2.0f };
-                  DrawCubeWiresV(center, size, GREEN);
-              }
-
-              for (const auto& q : scene.quads) {
-                  Vector3 p1 = {q.Q.x, q.Q.y, q.Q.z};
-                  Vector3 p2 = {q.Q.x + q.u.x, q.Q.y + q.u.y, q.Q.z + q.u.z};
-                  Vector3 p3 = {q.Q.x + q.u.x + q.v.x, q.Q.y + q.u.y + q.v.y, q.Q.z + q.u.z + q.v.z};
-                  Vector3 p4 = {q.Q.x + q.v.x, q.Q.y + q.v.y, q.Q.z + q.v.z};
-                  DrawLine3D(p1, p2, GREEN);
-                  DrawLine3D(p2, p3, GREEN);
-                  DrawLine3D(p3, p4, GREEN);
-                  DrawLine3D(p4, p1, GREEN);
-              }
-
-          EndMode3D();
-        
-          DrawText("PREVIEW MODE (TAB to toggle cursor, WASD to Fly)", 10, 10, 20, GREEN);
-      } else {
+      if (renderer.isRendering) {
+          Rectangle srcRect = { 0, 0, (float)renderer.outputTex.width, -(float)renderer.outputTex.height };
+          Rectangle destRect = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
+          DrawTexturePro(renderer.outputTex, srcRect, destRect, {0,0}, 0.0f, WHITE);
+          
           DrawText(TextFormat("Rendering... Sample: %d", renderer.samplesDone), 10, 10, 20, ORANGE);
+      } else {
+          renderer.drawRaylibPreview();
+          DrawText("PREVIEW MODE (TAB to toggle cursor, WASD to Fly)", 10, 10, 20, GREEN);
       }
 
       rlImGuiBegin();
@@ -138,9 +115,9 @@ int main() {
 
       EndDrawing();
   }
-
-    rlImGuiShutdown();
+  rlImGuiShutdown();
     UnloadTexture(renderer.outputTex);
     CloseWindow();
+    
     return 0;
 }

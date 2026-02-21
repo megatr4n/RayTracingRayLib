@@ -10,6 +10,14 @@ namespace rt
         normal = frontFace ? outwardNormal : -outwardNormal;
     }
 
+    static void get_sphere_uv(const Vec3& p, float& u, float& v) {
+        float theta = std::acos(-p.y);
+        float phi = std::atan2(-p.z, p.x) + M_PI;
+
+        u = phi / (2 * M_PI);
+        v = theta / M_PI;
+    }
+
     bool Sphere::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const
     {
         Vec3 oc = r.origin - center;
@@ -34,6 +42,12 @@ namespace rt
         rec.t = root;
         rec.p = r.at(root);
         rec.setFaceNormal(r, (rec.p - center) / radius);
+
+        Vec3 outward_normal = (rec.p - center) / radius;
+        rec.setFaceNormal(r, outward_normal);
+
+        get_sphere_uv(outward_normal, rec.u, rec.v);
+
         rec.mat = mat;
         return true;
     }
@@ -72,6 +86,10 @@ namespace rt
         rec.p = intersection;
         rec.mat = mat;
         rec.setFaceNormal(r, normal);
+
+        rec.u = alpha;
+        rec.v = beta;
+        
         return true;
     }
 

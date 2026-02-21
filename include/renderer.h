@@ -42,6 +42,8 @@ public:
     void reset();
     void renderSample();
 
+    void drawRaylibPreview();
+
     void startRender();
     void stopRender();
 
