@@ -10,6 +10,8 @@ struct BvhItem {
     AABB box;
     const Sphere* sphere = nullptr;
     const Quad* quad = nullptr;
+    const Triangle* tri = nullptr;
+    const Mesh* mesh = nullptr;
 };
 
 class BvhNode {

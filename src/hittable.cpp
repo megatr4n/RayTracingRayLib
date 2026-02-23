@@ -89,7 +89,39 @@ namespace rt
 
         rec.u = alpha;
         rec.v = beta;
+
+        return true;
+    }
+
+    bool Triangle::hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const {
+        Vec3 edge1 = v1 - v0;
+        Vec3 edge2 = v2 - v0;
+        Vec3 h = cross(r.direction, edge2);
+        float a = dot(edge1, h);
+        if (std::abs(a) < 1e-8f) return false;
+
+        float f = 1.0f / a;
+        Vec3 s = r.origin - v0;
+        float u = f * dot(s, h);
+        if (u < 0.0f || u > 1.0f) return false;
+
+        Vec3 q = cross(s, edge1);
+        float v = f * dot(r.direction, q);
+        if (v < 0.0f || u + v > 1.0f) return false;
+
+        float t = f * dot(edge2, q);
+        if (t < tMin || t > tMax) return false;
+
+        rec.t = t;
+        rec.p = r.at(t);
         
+        Vec3 outwardNormal = normalize(cross(edge1, edge2));
+        rec.setFaceNormal(r, outwardNormal);
+        rec.mat = mat;
+        
+        rec.u = u;
+        rec.v = v;
+
         return true;
     }
 
@@ -103,16 +135,16 @@ namespace rt
         bvhRoot = nullptr;
 
         std::vector<BvhItem> items;
-        items.reserve(spheres.size() + quads.size());
+        items.reserve(spheres.size() + quads.size() + triangles.size());
 
         for (const auto &s : spheres)
-        {
-            items.push_back({s.boundingBox(), &s, nullptr});
-        }
+            items.push_back({s.boundingBox(), &s, nullptr, nullptr, nullptr});
         for (const auto &q : quads)
-        {
-            items.push_back({q.boundingBox(), nullptr, &q});
-        }
+            items.push_back({q.boundingBox(), nullptr, &q, nullptr, nullptr});
+        for (const auto &t : triangles)
+            items.push_back({t.boundingBox(), nullptr, nullptr, &t, nullptr});
+        for (const auto &m : meshes)
+            items.push_back({m.boundingBox(), nullptr, nullptr, nullptr, &m});
 
         if (!items.empty())
         {
@@ -144,6 +176,19 @@ namespace rt
                 best = tmp.t;
                 rec = tmp;
             }
+        }
+        for (const auto &tri : triangles)
+        {
+            if (tri.hit(r, tMin, best, tmp))
+            {
+                hitAny = true;
+                best = tmp.t;
+                rec = tmp;
+            }
+        }
+
+        for (const auto &mesh : meshes) {
+            if (mesh.hit(r, tMin, best, tmp)) { hitAny = true; best = tmp.t; rec = tmp; }
         }
         return hitAny;
     }

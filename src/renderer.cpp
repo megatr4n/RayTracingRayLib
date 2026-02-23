@@ -11,18 +11,14 @@ namespace rt
     void calculateInitialAngles(RtCameraParams &p)
     {
         Vec3 dir = normalize(p.lookAt - p.lookFrom);
-
         p.pitch = std::asin(dir.y) * (180.0f / 3.14159265f);
-
         p.yaw = std::atan2(dir.z, dir.x) * (180.0f / 3.14159265f);
     }
 
     void Renderer::init(Scene *s)
     {
         scene = s;
-
         calculateInitialAngles(camParams);
-
         camera.init(camParams);
 
         isPreview = true;
@@ -271,6 +267,25 @@ namespace rt
             DrawCubeWiresV(center, size, ColorAlpha(GREEN, 0.9f));
         }
 
+        for (const auto& t : scene->triangles) {
+            Color col = { 
+                (unsigned char)(t.mat.albedo.x * 255.0f), 
+                (unsigned char)(t.mat.albedo.y * 255.0f), 
+                (unsigned char)(t.mat.albedo.z * 255.0f), 255 
+            };
+            
+            Vector3 p1 = { t.v0.x, t.v0.y, t.v0.z };
+            Vector3 p2 = { t.v1.x, t.v1.y, t.v1.z };
+            Vector3 p3 = { t.v2.x, t.v2.y, t.v2.z };
+
+            DrawTriangle3D(p1, p2, p3, col);
+            DrawTriangle3D(p1, p3, p2, col);
+
+            DrawLine3D(p1, p2, GREEN);
+            DrawLine3D(p2, p3, GREEN);
+            DrawLine3D(p3, p1, GREEN);
+        }
+
         for (const auto& q : scene->quads) {
             rt::Vec3 normal = rt::normalize(rt::cross(q.u, q.v));
             rt::Vec3 lightDir = rt::normalize(rt::Vec3{0.5f, 1.0f, -0.8f});
@@ -281,7 +296,7 @@ namespace rt
                 (unsigned char)(q.mat.albedo.y * diffuse * 255.0f), 
                 (unsigned char)(q.mat.albedo.z * diffuse * 255.0f), 255 
             };
-            
+
             Vector3 p1 = { q.Q.x, q.Q.y, q.Q.z };
             Vector3 p2 = { q.Q.x + q.u.x, q.Q.y + q.u.y, q.Q.z + q.u.z };
             Vector3 p3 = { q.Q.x + q.u.x + q.v.x, q.Q.y + q.u.y + q.v.y, q.Q.z + q.u.z + q.v.z };
@@ -296,6 +311,27 @@ namespace rt
             DrawLine3D(p2, p3, GREEN);
             DrawLine3D(p3, p4, GREEN);
             DrawLine3D(p4, p1, GREEN);
+        }
+
+        // --- 4. МЕШІ (ПІРАМІДИ ТА ІНШІ 3D МОДЕЛІ) ---
+        for (const auto& m : scene->meshes) {
+            Color col = { 
+                (unsigned char)(m.mat.albedo.x * 255.0f), 
+                (unsigned char)(m.mat.albedo.y * 255.0f), 
+                (unsigned char)(m.mat.albedo.z * 255.0f), 255 
+            };
+            for (const auto& t : m.localTriangles) {
+                Vector3 p1 = { t.v0.x + m.position.x, t.v0.y + m.position.y, t.v0.z + m.position.z };
+                Vector3 p2 = { t.v1.x + m.position.x, t.v1.y + m.position.y, t.v1.z + m.position.z };
+                Vector3 p3 = { t.v2.x + m.position.x, t.v2.y + m.position.y, t.v2.z + m.position.z };
+
+                DrawTriangle3D(p1, p2, p3, col);
+                DrawTriangle3D(p1, p3, p2, col);
+                
+                DrawLine3D(p1, p2, GREEN); 
+                DrawLine3D(p2, p3, GREEN); 
+                DrawLine3D(p3, p1, GREEN);
+            }
         }
 
         EndMode3D();
