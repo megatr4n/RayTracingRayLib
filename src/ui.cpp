@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <string>
 #include <vector>
+#include <ctime>
 
 namespace rt
 {
@@ -177,6 +178,40 @@ namespace rt
 
     bool drawUI(Renderer &renderer, Scene &scene)
     {
+
+        static bool styleSet = false;
+        if (!styleSet)
+        {
+            ImGuiStyle &style = ImGui::GetStyle();
+
+            style.WindowRounding = 8.0f;
+            style.FrameRounding = 5.0f;
+            style.GrabRounding = 5.0f;
+            style.PopupRounding = 5.0f;
+            style.ScrollbarRounding = 12.0f;
+            style.ItemSpacing = ImVec2(8, 6);
+
+            ImVec4 *colors = style.Colors;
+            colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+            colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 0.98f);
+            colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+            colors[ImGuiCol_TitleBgActive] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+            colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+            colors[ImGuiCol_FrameBgHovered] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+            colors[ImGuiCol_FrameBgActive] = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+            colors[ImGuiCol_Button] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+            colors[ImGuiCol_ButtonHovered] = ImVec4(0.28f, 0.32f, 0.36f, 1.00f);
+            colors[ImGuiCol_ButtonActive] = ImVec4(0.15f, 0.18f, 0.22f, 1.00f);
+            colors[ImGuiCol_Header] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+            colors[ImGuiCol_HeaderHovered] = ImVec4(0.28f, 0.32f, 0.36f, 1.00f);
+            colors[ImGuiCol_HeaderActive] = ImVec4(0.32f, 0.36f, 0.40f, 1.00f);
+            colors[ImGuiCol_SliderGrab] = ImVec4(0.45f, 0.45f, 0.45f, 1.00f);
+            colors[ImGuiCol_SliderGrabActive] = ImVec4(0.55f, 0.55f, 0.55f, 1.00f);
+            colors[ImGuiCol_Separator] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+
+            styleSet = true;
+        }
+
         bool changed = false;
 
         ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Once);
@@ -258,6 +293,14 @@ namespace rt
         ImGui::TextColored({0.4f, 1.0f, 0.4f, 1.0f}, "Samples: %d / %d",
                            renderer.samplesDone, renderer.settings.samplesTarget);
         ImGui::ProgressBar(progress, {-1, 0});
+        ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.33f, 0.7f, 0.6f));
+        if (ImGui::Button("Save Render to PNG", ImVec2(-1, 30)))
+        {
+            std::string filename = "render_" + std::to_string(time(nullptr)) + ".png";
+            renderer.saveRenderToPNG(filename);
+        }
+        ImGui::PopStyleColor();
+
         ImGui::Separator();
 
         if (renderer.isRendering)
@@ -285,7 +328,20 @@ namespace rt
             {
                 Sphere &s = scene.spheres[i];
                 ImGui::PushID(i);
-                if (ImGui::TreeNode(("Obj " + std::to_string(i)).c_str()))
+
+                bool isSelected = (renderer.selection.type == ObjType::Sphere && renderer.selection.index == i);
+                if (isSelected)
+                {
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);                       // Авто-розгортання
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f)); // Жовтий колір тексту
+                }
+
+                bool nodeOpen = ImGui::TreeNode(("Obj " + std::to_string(i)).c_str());
+
+                if (isSelected)
+                    ImGui::PopStyleColor();
+
+                if (nodeOpen)
                 {
                     changed |= ImGui::DragFloat3("Center", &s.center.x, 0.1f);
                     changed |= ImGui::SliderFloat("Radius", &s.radius, 0.05f, 100.0f);
@@ -343,11 +399,25 @@ namespace rt
             {
                 Quad &q = scene.quads[i];
                 ImGui::PushID(1000 + i);
-                if (ImGui::TreeNode(("Quad " + std::to_string(i)).c_str()))
+
+                bool isSelected = (renderer.selection.type == ObjType::Quad && renderer.selection.index == i);
+                if (isSelected)
+                {
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+                }
+
+                bool nodeOpen = ImGui::TreeNode(("Quad " + std::to_string(i)).c_str());
+
+                if (isSelected)
+                    ImGui::PopStyleColor();
+
+                if (nodeOpen)
                 {
                     Vec3 center = q.Q + (q.u + q.v) * 0.5f;
                     Vec3 oldCenter = center;
-                    if (ImGui::DragFloat3("Move (Center)", &center.x, 0.1f)) {
+                    if (ImGui::DragFloat3("Move (Center)", &center.x, 0.1f))
+                    {
                         Vec3 delta = center - oldCenter;
                         q.Q = q.Q + delta;
                         q.init(q.Q, q.u, q.v, q.mat);
@@ -405,23 +475,47 @@ namespace rt
             {
                 Mesh &m = scene.meshes[i];
                 ImGui::PushID(3000 + i);
-                if (ImGui::TreeNode(("Mesh " + std::to_string(i)).c_str()))
+
+                bool isSelected = (renderer.selection.type == ObjType::Mesh && renderer.selection.index == i);
+                if (isSelected)
+                {
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+                }
+
+                bool nodeOpen = ImGui::TreeNode(("Mesh " + std::to_string(i)).c_str());
+
+                if (isSelected)
+                    ImGui::PopStyleColor();
+
+                if (nodeOpen)
                 {
                     changed |= ImGui::DragFloat3("Position", &m.position.x, 0.1f);
 
                     const char *types[] = {"Lambertian", "Metal", "Dielectric", "DiffuseLight"};
                     int t = (int)m.mat.type;
-                    if (ImGui::Combo("Material", &t, types, 4)) { m.mat.type = (MaterialType)t; changed = true; }
+                    if (ImGui::Combo("Material", &t, types, 4))
+                    {
+                        m.mat.type = (MaterialType)t;
+                        changed = true;
+                    }
                     changed |= ImGui::ColorEdit3("Albedo", &m.mat.albedo.x);
 
-                    if (m.mat.type == MaterialType::Metal) changed |= ImGui::SliderFloat("Fuzz", &m.mat.fuzz, 0.0f, 1.0f);
-                    if (m.mat.type == MaterialType::Dielectric) changed |= ImGui::SliderFloat("IOR", &m.mat.ior, 1.0f, 3.0f);
+                    if (m.mat.type == MaterialType::Metal)
+                        changed |= ImGui::SliderFloat("Fuzz", &m.mat.fuzz, 0.0f, 1.0f);
+                    if (m.mat.type == MaterialType::Dielectric)
+                        changed |= ImGui::SliderFloat("IOR", &m.mat.ior, 1.0f, 3.0f);
 
                     if (ImGui::Button("Remove"))
                     {
                         scene.meshes.erase(scene.meshes.begin() + i);
-                        ImGui::TreePop(); ImGui::PopID(); changed = true;
-                        if (renderer.isRendering) ImGui::EndDisabled(); ImGui::End(); return true;
+                        ImGui::TreePop();
+                        ImGui::PopID();
+                        changed = true;
+                        if (renderer.isRendering)
+                            ImGui::EndDisabled();
+                        ImGui::End();
+                        return true;
                     }
                     ImGui::TreePop();
                 }

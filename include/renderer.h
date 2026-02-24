@@ -19,6 +19,13 @@ struct RendererSettings {
     float mouseSens   = 0.2f; 
 };
 
+enum class ObjType { None, Sphere, Quad, Mesh };
+
+    struct Selection {
+        ObjType type = ObjType::None;
+        int index = -1;
+    };
+
 class Renderer {
 public:
     tf::Executor executor; 
@@ -27,6 +34,12 @@ public:
     RtCameraParams   camParams;
     Scene* scene       = nullptr;
     RtCamera         camera;
+    Selection selection;
+
+    int draggingAxis = -1;  
+    float initialDragT = 0.0f;
+    Vec3 initialObjPos;
+    
     Texture2D        outputTex   = {};
     int samplesDone = 0;
     
@@ -46,6 +59,7 @@ public:
 
     void startRender();
     void stopRender();
+    void saveRenderToPNG(const std::string& filename);
 
 private:
     void uploadPixels();
