@@ -234,6 +234,7 @@ namespace rt
             if (ImGui::Button("START RENDER", ImVec2(-1, 30)))
             {
                 renderer.startRender();
+                renderer.accumulateRays = true;
             }
             ImGui::PopStyleColor();
         }
@@ -253,15 +254,6 @@ namespace rt
             if (ImGui::Button("Cornell Box", ImVec2(150, 0)))
             {
                 createCornellBox(scene, renderer.camParams);
-                scene.buildBVH();
-                renderer.camera.init(renderer.camParams);
-                renderer.reset();
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Pyramid", ImVec2(100, 0)))
-            {
-                createPyramidScene(scene, renderer.camParams);
                 scene.buildBVH();
                 renderer.camera.init(renderer.camParams);
                 renderer.reset();
@@ -293,6 +285,15 @@ namespace rt
         ImGui::TextColored({0.4f, 1.0f, 0.4f, 1.0f}, "Samples: %d / %d",
                            renderer.samplesDone, renderer.settings.samplesTarget);
         ImGui::ProgressBar(progress, {-1, 0});
+
+        ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.6f, 0.7f, 0.6f));
+        if (ImGui::Button("Denoise Image (AI)", ImVec2(-1, 30)))
+        {
+            renderer.denoise();
+            renderer.accumulateRays = false;
+        }
+        ImGui::PopStyleColor();
+
         ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.33f, 0.7f, 0.6f));
         if (ImGui::Button("Save Render to PNG", ImVec2(-1, 30)))
         {

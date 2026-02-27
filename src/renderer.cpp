@@ -34,6 +34,8 @@ namespace rt
     {
         settings.width = w;
         settings.height = h;
+        albedoBuffer.assign(w * h, {0, 0, 0});
+        normalBuffer.assign(w * h, {0, 0, 0});
         accumBuffer.assign(w * h, {0, 0, 0});
         pixels.assign(w * h * 4, 0);
 
@@ -53,6 +55,8 @@ namespace rt
     {
         samplesDone = 0;
         std::fill(accumBuffer.begin(), accumBuffer.end(), Vec3{0, 0, 0});
+        std::fill(albedoBuffer.begin(), albedoBuffer.end(), Vec3{0, 0, 0});
+        std::fill(normalBuffer.begin(), normalBuffer.end(), Vec3{0, 0, 0});
     }
 
     void Renderer::startRender()
@@ -161,30 +165,38 @@ namespace rt
                     float minT = 1e9f;
                     ObjType hitType = ObjType::None;
                     int hitIndex = -1;
-                    
-                    for (int i = 0; i < (int)scene->spheres.size(); ++i) { 
-                        HitRecord rec; 
-                        if (scene->spheres[i].hit(r, 0.001f, minT, rec)) { 
-                            minT = rec.t; 
-                            hitType = ObjType::Sphere; hitIndex = i; 
-                        } 
+
+                    for (int i = 0; i < (int)scene->spheres.size(); ++i)
+                    {
+                        HitRecord rec;
+                        if (scene->spheres[i].hit(r, 0.001f, minT, rec))
+                        {
+                            minT = rec.t;
+                            hitType = ObjType::Sphere;
+                            hitIndex = i;
+                        }
                     }
-                    for (int i = 0; i < (int)scene->quads.size(); ++i) { 
-                        HitRecord rec; 
-                        if (scene->quads[i].hit(r, 0.001f, minT, rec)) { 
-                            minT = rec.t; 
-                            hitType = ObjType::Quad; hitIndex = i; 
-                        } 
+                    for (int i = 0; i < (int)scene->quads.size(); ++i)
+                    {
+                        HitRecord rec;
+                        if (scene->quads[i].hit(r, 0.001f, minT, rec))
+                        {
+                            minT = rec.t;
+                            hitType = ObjType::Quad;
+                            hitIndex = i;
+                        }
                     }
-                    for (int i = 0; i < (int)scene->meshes.size(); ++i) { 
-                        HitRecord rec; 
-                        if (scene->meshes[i].hit(r, 0.001f, minT, rec)) { 
-                            minT = rec.t; 
-                            hitType = ObjType::Mesh; 
-                            hitIndex = i; 
-                        } 
+                    for (int i = 0; i < (int)scene->meshes.size(); ++i)
+                    {
+                        HitRecord rec;
+                        if (scene->meshes[i].hit(r, 0.001f, minT, rec))
+                        {
+                            minT = rec.t;
+                            hitType = ObjType::Mesh;
+                            hitIndex = i;
+                        }
                     }
-                    
+
                     selection = {hitType, hitIndex};
                     draggingAxis = -1;
                 }
@@ -289,34 +301,52 @@ namespace rt
         return Vec3(0.15f, 0.15f, 0.15f);
     }
 
-    Vec3 Renderer::traceRay(const Ray &r, int depth)
+    Vec3 Renderer::traceRay(const Ray &r, int depth, bool isPrimary, Vec3 &outAlbedo, Vec3 &outNormal)
     {
         if (depth <= 0)
             return {0, 0, 0};
+
         HitRecord rec;
+
         if (!scene->hit(r, 0.001f, 1e9f, rec))
         {
             if (scene->quads.empty())
             {
                 Vec3 unit = normalize(r.direction);
                 float t = 0.5f * (unit.y + 1.0f);
-                return (1.0f - t) * Vec3{1.0f, 1.0f, 1.0f} + t * Vec3{0.5f, 0.7f, 1.0f};
+                Vec3 skyColor = (1.0f - t) * Vec3{1.0f, 1.0f, 1.0f} + t * Vec3{0.5f, 0.7f, 1.0f};
+
+                if (isPrimary)
+                {
+                    outAlbedo = rec.mat.albedo;
+                    outNormal = rec.normal;
+                }
+                return skyColor;
             }
             else
             {
+                if (isPrimary)
+                {
+                    outAlbedo = {0, 0, 0};
+                    outNormal = {0, 0, 0};
+                }
                 return {0, 0, 0};
             }
         }
 
+        if (isPrimary)
+        {
+            outAlbedo = rec.mat.albedo;
+            outNormal = (rec.normal + Vec3{1.0f, 1.0f, 1.0f}) * 0.5f;
+        }
+
         Ray scattered;
         Vec3 attenuation;
-
         Vec3 emitted = rec.mat.emitted(rec.u, rec.v, rec.p);
 
-        Vec3 unit = normalize(r.direction);
         if (rec.mat.scatter(r, rec, attenuation, scattered))
         {
-            return emitted + attenuation * traceRay(scattered, depth - 1);
+            return emitted + attenuation * traceRay(scattered, depth - 1, false, outAlbedo, outNormal);
         }
         return emitted;
     }
@@ -329,6 +359,8 @@ namespace rt
         {
             return;
         }
+        if (!accumulateRays)
+            return;
 
         if (samplesDone >= settings.samplesTarget)
             return;
@@ -341,8 +373,16 @@ namespace rt
                 float v = (j + randomFloat()) / (H - 1);
                 
                 Ray r = camera.getRay(u, v);
-                accumBuffer[j * W + i] += traceRay(r, settings.maxBounces);
-            } });
+                Vec3 pixelAlbedo = {0,0,0};
+                Vec3 pixelNormal = {0,0,0};
+                Vec3 pixelColor = traceRay(r, settings.maxBounces, true, pixelAlbedo, pixelNormal); 
+                
+                int idx = j * W + i;
+                accumBuffer[idx]  += pixelColor;
+                albedoBuffer[idx] += pixelAlbedo;
+                normalBuffer[idx] += pixelNormal;
+            }
+        });
 
         executor.run(taskflow).wait();
 
@@ -497,9 +537,9 @@ namespace rt
 
             rlDisableDepthTest();
 
-            float thick = 0.015f; 
-            float tip = 0.08f; 
-            float len = 1.2f; 
+            float thick = 0.015f;
+            float tip = 0.08f;
+            float len = 1.2f;
             int segs = 16;
             DrawCylinderEx(center, {center.x + len, center.y, center.z}, thick, thick, segs, RED);
             DrawCylinderEx({center.x + len, center.y, center.z}, {center.x + len + 0.2f, center.y, center.z}, tip, 0.0f, segs, RED);
@@ -523,5 +563,66 @@ namespace rt
         img.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
 
         ExportImage(img, filename.c_str());
+    }
+
+    void denoise();
+
+    void Renderer::denoise()
+    {
+        if (samplesDone == 0)
+            return;
+
+        int W = settings.width;
+        int H = settings.height;
+        float divisor = (float)samplesDone;
+
+        std::vector<float> colorFlat(W * H * 3);
+        std::vector<float> albedoFlat(W * H * 3);
+        std::vector<float> normalFlat(W * H * 3);
+
+        for (int i = 0; i < W * H; ++i)
+        {
+            Vec3 c = accumBuffer[i] / divisor;
+            Vec3 a = albedoBuffer[i] / divisor;
+            Vec3 n = normalBuffer[i] / divisor;
+
+            colorFlat[i * 3 + 0] = c.x;
+            colorFlat[i * 3 + 1] = c.y;
+            colorFlat[i * 3 + 2] = c.z;
+            albedoFlat[i * 3 + 0] = a.x;
+            albedoFlat[i * 3 + 1] = a.y;
+            albedoFlat[i * 3 + 2] = a.z;
+            normalFlat[i * 3 + 0] = n.x;
+            normalFlat[i * 3 + 1] = n.y;
+            normalFlat[i * 3 + 2] = n.z;
+        }
+
+        oidn::DeviceRef device = oidn::newDevice();
+        device.commit();
+
+        oidn::FilterRef filter = device.newFilter("RT");
+        filter.setImage("color", colorFlat.data(), oidn::Format::Float3, W, H);
+        filter.setImage("albedo", albedoFlat.data(), oidn::Format::Float3, W, H);
+        filter.setImage("normal", normalFlat.data(), oidn::Format::Float3, W, H);
+        filter.setImage("output", colorFlat.data(), oidn::Format::Float3, W, H);
+        filter.set("hdr", true);
+        filter.set("cleanAux", false);
+        filter.commit();
+
+        filter.execute();
+
+        const char *errorMessage;
+        if (device.getError(errorMessage) != oidn::Error::None)
+        {
+            printf("OIDN Error: %s\n", errorMessage);
+        }
+        for (int i = 0; i < W * H; ++i)
+        {
+            accumBuffer[i] = {colorFlat[i * 3 + 0], colorFlat[i * 3 + 1], colorFlat[i * 3 + 2]};
+        }
+        std::fill(albedoBuffer.begin(), albedoBuffer.end(), Vec3{0, 0, 0});
+        std::fill(normalBuffer.begin(), normalBuffer.end(), Vec3{0, 0, 0});
+        samplesDone = 1;
+        uploadPixels();
     }
 }

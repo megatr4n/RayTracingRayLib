@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Threads REQUIRED)
 
+set(OIDN_DIR ${CMAKE_SOURCE_DIR}/external/oidn)
+include_directories(${OIDN_DIR}/include)
+link_directories(${OIDN_DIR}/lib)
+
 set(IMGUI_DIR   ${CMAKE_SOURCE_DIR}/external/imgui)
 set(RLIMGUI_DIR ${CMAKE_SOURCE_DIR}/external/rlImGui)
 
@@ -41,13 +45,24 @@ target_include_directories(raytracer PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(raytracer PRIVATE raylib imgui rlimgui Threads::Threads)
+target_link_libraries(raytracer PRIVATE 
+    raylib 
+    imgui 
+    rlimgui 
+    Threads::Threads 
+    OpenImageDenoise 
+)
 
 if(APPLE)
     find_library(COCOA Cocoa)
     find_library(OGL OpenGL)
     find_library(IOKIT IOKit)
     target_link_libraries(raytracer PRIVATE ${COCOA} ${OGL} ${IOKIT})
+    
+    add_custom_command(TARGET raytracer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${OIDN_DIR}/lib $<TARGET_FILE_DIR:raytracer>
+    )
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)

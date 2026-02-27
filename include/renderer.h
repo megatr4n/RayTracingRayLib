@@ -8,6 +8,8 @@
 
 #include <taskflow/algorithm/for_each.hpp>
 
+#include <OpenImageDenoise/oidn.hpp>
+
 namespace rt {
 
 struct RendererSettings {
@@ -28,6 +30,7 @@ enum class ObjType { None, Sphere, Quad, Mesh };
 
 class Renderer {
 public:
+    bool accumulateRays = true;
     tf::Executor executor; 
 
     RendererSettings settings;
@@ -39,15 +42,12 @@ public:
     int draggingAxis = -1;  
     float initialDragT = 0.0f;
     Vec3 initialObjPos;
-    
+
     Texture2D        outputTex   = {};
     int samplesDone = 0;
     
     bool isPreview   = true;
     bool isRendering = false;
-
-    std::vector<Vec3>          accumBuffer;
-    std::vector<unsigned char> pixels;
 
     void init(Scene* s);
     void update(float dt);
@@ -60,10 +60,20 @@ public:
     void startRender();
     void stopRender();
     void saveRenderToPNG(const std::string& filename);
+    void denoise();
 
 private:
-    void uploadPixels();
-    Vec3 traceRay(const Ray& r, int depth);
-    Vec3 tracePreview(const Ray& r);
+
+Vec3 traceRay(const Ray& r, int depth, bool isPrimary, Vec3& outAlbedo, Vec3& outNormal);
+
+        Vec3 tracePreview(const Ray& r);
+        Vec3 traceRay(const Ray& r, int depth);
+        void uploadPixels();
+
+        std::vector<Vec3> accumBuffer; 
+        std::vector<Vec3> albedoBuffer; 
+        std::vector<Vec3> normalBuffer;
+        std::vector<unsigned char> pixels;
+
 };
 }
