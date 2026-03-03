@@ -2,15 +2,129 @@
 #include "bvh_node.h"
 #include <cmath>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+#include <iostream>
+
 namespace rt
 {
+
+    bool loadMeshFromOBJ(const std::string &filename, Mesh &outMesh, Material mat, Vec3 position, float scale)
+    {
+        tinyobj::ObjReaderConfig reader_config;
+        tinyobj::ObjReader reader;
+
+        if (!reader.ParseFromFile(filename, reader_config))
+        {
+            if (!reader.Error().empty())
+            {
+                std::cerr << "TinyObjReader: " << reader.Error();
+            }
+            return false;
+        }
+
+        auto &attrib = reader.GetAttrib();
+        auto &shapes = reader.GetShapes();
+
+        outMesh.mat = mat;
+        outMesh.position = position;
+        outMesh.localTriangles.clear();
+
+        for (size_t s = 0; s < shapes.size(); s++)
+        {
+            size_t index_offset = 0;
+            for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
+            {
+                Vec3 v[3];
+                Vec3 n[3];
+                bool has_normals = true;
+
+                for (size_t v_idx = 0; v_idx < 3; v_idx++)
+                {
+                    tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v_idx];
+                    v[v_idx] = {
+                        attrib.vertices[3 * size_t(idx.vertex_index) + 0] * scale,
+                        attrib.vertices[3 * size_t(idx.vertex_index) + 1] * scale,
+                        attrib.vertices[3 * size_t(idx.vertex_index) + 2] * scale};
+
+                    if (idx.normal_index >= 0)
+                    {
+                        n[v_idx] = {
+                            attrib.normals[3 * size_t(idx.normal_index) + 0],
+                            attrib.normals[3 * size_t(idx.normal_index) + 1],
+                            attrib.normals[3 * size_t(idx.normal_index) + 2]};
+                    }
+                    else
+                    {
+                        has_normals = false;
+                    }
+                }
+
+                Triangle tri;
+                tri.v0 = v[0];
+                tri.v1 = v[1];
+                tri.v2 = v[2];
+
+                if (has_normals)
+                {
+                    tri.n0 = n[0];
+                    tri.n1 = n[1];
+                    tri.n2 = n[2];
+                    tri.hasNormals = true;
+                }
+
+                tri.mat = mat;
+                outMesh.localTriangles.push_back(tri);
+
+                index_offset += 3;
+            }
+        }
+        return true;
+    }
+
+    bool Mesh::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const
+    {
+        Ray localRay(r.origin - position, r.direction);
+        bool hitAny = false;
+
+        if (bvhRoot != nullptr)
+        {
+            if (bvhRoot->hit(localRay, tMin, tMax, rec))
+            {
+                hitAny = true;
+            }
+        }
+        else
+        {
+            float best = tMax;
+            HitRecord tmp;
+            for (const auto &tri : localTriangles)
+            {
+                if (tri.hit(localRay, tMin, best, tmp))
+                {
+                    hitAny = true;
+                    best = tmp.t;
+                    rec = tmp;
+                }
+            }
+        }
+
+        if (hitAny)
+        {
+            rec.p = rec.p + position;
+            rec.mat = mat;
+        }
+        return hitAny;
+    }
+
     void HitRecord::setFaceNormal(const Ray &r, const Vec3 &outwardNormal)
     {
         frontFace = dot(r.direction, outwardNormal) < 0;
         normal = frontFace ? outwardNormal : -outwardNormal;
     }
 
-    static void get_sphere_uv(const Vec3& p, float& u, float& v) {
+    static void get_sphere_uv(const Vec3 &p, float &u, float &v)
+    {
         float theta = std::acos(-p.y);
         float phi = std::atan2(-p.z, p.x) + M_PI;
 
@@ -93,103 +207,109 @@ namespace rt
         return true;
     }
 
-    bool Triangle::hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const {
+    bool Triangle::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const
+    {
         Vec3 edge1 = v1 - v0;
         Vec3 edge2 = v2 - v0;
         Vec3 h = cross(r.direction, edge2);
         float a = dot(edge1, h);
-        if (std::abs(a) < 1e-8f) return false;
+        if (std::abs(a) < 1e-8f)
+            return false;
 
         float f = 1.0f / a;
         Vec3 s = r.origin - v0;
         float u = f * dot(s, h);
-        if (u < 0.0f || u > 1.0f) return false;
+        if (u < 0.0f || u > 1.0f)
+            return false;
 
         Vec3 q = cross(s, edge1);
         float v = f * dot(r.direction, q);
-        if (v < 0.0f || u + v > 1.0f) return false;
+        if (v < 0.0f || u + v > 1.0f)
+            return false;
 
         float t = f * dot(edge2, q);
-        if (t < tMin || t > tMax) return false;
+        if (t < tMin || t > tMax)
+            return false;
 
         rec.t = t;
         rec.p = r.at(t);
-        
-        Vec3 outwardNormal = normalize(cross(edge1, edge2));
+
+        Vec3 outwardNormal;
+        if (hasNormals)
+        {
+            float w = 1.0f - u - v;
+            outwardNormal = normalize(n0 * w + n1 * u + n2 * v);
+        }
+        else
+        {
+            outwardNormal = normalize(cross(edge1, edge2));
+        }
+
         rec.setFaceNormal(r, outwardNormal);
         rec.mat = mat;
-        
+
         rec.u = u;
         rec.v = v;
 
         return true;
     }
 
-    Scene::~Scene() {
+    Scene::~Scene()
+    {
         delete bvhRoot;
     }
 
-    void Scene::buildBVH()
-    {
+    void Scene::buildBVH() {
         delete bvhRoot;
         bvhRoot = nullptr;
 
         std::vector<BvhItem> items;
-        items.reserve(spheres.size() + quads.size() + triangles.size());
+        items.reserve(spheres.size() + quads.size() + triangles.size() + meshes.size());
 
-        for (const auto &s : spheres)
-            items.push_back({s.boundingBox(), &s, nullptr, nullptr, nullptr});
-        for (const auto &q : quads)
-            items.push_back({q.boundingBox(), nullptr, &q, nullptr, nullptr});
-        for (const auto &t : triangles)
-            items.push_back({t.boundingBox(), nullptr, nullptr, &t, nullptr});
-        for (const auto &m : meshes)
-            items.push_back({m.boundingBox(), nullptr, nullptr, nullptr, &m});
+        for (const auto &s : spheres) {
+            AABB b = s.boundingBox();
+            items.push_back({b, b.centroid(), &s, nullptr, nullptr, nullptr});
+        }
+        for (const auto &q : quads) {
+            AABB b = q.boundingBox();
+            items.push_back({b, b.centroid(), nullptr, &q, nullptr, nullptr});
+        }
+        for (const auto &t : triangles) {
+            AABB b = t.boundingBox();
+            items.push_back({b, b.centroid(), nullptr, nullptr, &t, nullptr});
+        }
+        for (const auto &m : meshes) {
+            AABB b = m.boundingBox();
+            items.push_back({b, b.centroid(), nullptr, nullptr, nullptr, &m});
+        }
 
-        if (!items.empty())
-        {
+        if (!items.empty()) {
             bvhRoot = new BvhNode(items, 0, items.size());
         }
     }
 
-    bool Scene::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const
-    {
-        HitRecord tmp;
-        bool hitAny = false;
-        float best = tMax;
+    void Mesh::buildBVH() {
+        delete bvhRoot;
+        bvhRoot = nullptr;
 
-        for (const auto &sphere : spheres)
-        {
-            if (sphere.hit(r, tMin, best, tmp))
-            {
-                hitAny = true;
-                best = tmp.t;
-                rec = tmp;
-            }
-        }
+        if (localTriangles.empty())
+            return;
 
-        for (const auto &quad : quads)
-        {
-            if (quad.hit(r, tMin, best, tmp))
-            {
-                hitAny = true;
-                best = tmp.t;
-                rec = tmp;
-            }
-        }
-        for (const auto &tri : triangles)
-        {
-            if (tri.hit(r, tMin, best, tmp))
-            {
-                hitAny = true;
-                best = tmp.t;
-                rec = tmp;
-            }
-        }
+        std::vector<BvhItem> items;
+        items.reserve(localTriangles.size());
 
-        for (const auto &mesh : meshes) {
-            if (mesh.hit(r, tMin, best, tmp)) { hitAny = true; best = tmp.t; rec = tmp; }
+        for (const auto &tri : localTriangles)
+        {
+            AABB b = tri.boundingBox();
+            items.push_back({b, b.centroid(), nullptr, nullptr, &tri, nullptr});
         }
-        return hitAny;
+        bvhRoot = new BvhNode(items, 0, items.size());
     }
+
+    bool Scene::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const {
+    if (bvhRoot != nullptr) {
+        return bvhRoot->hit(r, tMin, tMax, rec);
+    }
+    return false;
+}
 }
