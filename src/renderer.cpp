@@ -361,21 +361,34 @@ namespace rt
             return;
 
         tf::Taskflow taskflow;
-        taskflow.for_each_index(0, H, 1, [&](int j)
-                                {
-            for (int i = 0; i < W; ++i) {
-                float u = (i + randomFloat()) / (W - 1);
-                float v = (j + randomFloat()) / (H - 1);
-                
-                Ray r = camera.getRay(u, v);
-                Vec3 pixelAlbedo = {0,0,0};
-                Vec3 pixelNormal = {0,0,0};
-                Vec3 pixelColor = traceRay(r, settings.maxBounces, true, pixelAlbedo, pixelNormal); 
-                
-                int idx = j * W + i;
-                accumBuffer[idx]  += pixelColor;
-                albedoBuffer[idx] += pixelAlbedo;
-                normalBuffer[idx] += pixelNormal;
+
+        constexpr int TILE_SIZE = 16;
+        int numTilesX = (W + TILE_SIZE - 1) / TILE_SIZE;
+        int numTilesY = (H + TILE_SIZE - 1) / TILE_SIZE;
+        int totalTiles = numTilesX * numTilesY;
+
+        taskflow.for_each_index(0, totalTiles, 1, [&](int tileIdx) {
+            int tileY = tileIdx / numTilesX;
+            int tileX = tileIdx % numTilesX;
+
+            int startY = tileY * TILE_SIZE;
+            int endY = std::min(startY + TILE_SIZE, H);
+            int startX = tileX * TILE_SIZE;
+            int endX = std::min(startX + TILE_SIZE, W);
+
+            for (int j = startY; j < endY; ++j) {
+                for (int i = startX; i < endX; ++i) {
+                    float u = (i + randomFloat()) / (W - 1);
+                    float v = (j + randomFloat()) / (H - 1);
+                    Ray r = camera.getRay(u, v);
+                    Vec3 pixelAlbedo = {0,0,0};
+                    Vec3 pixelNormal = {0,0,0};
+                    Vec3 pixelColor = traceRay(r, settings.maxBounces, true, pixelAlbedo, pixelNormal); 
+                    int idx = j * W + i;
+                    accumBuffer[idx]  += pixelColor;
+                    albedoBuffer[idx] += pixelAlbedo;
+                    normalBuffer[idx] += pixelNormal;
+                }
             }
         });
 
