@@ -301,54 +301,49 @@ namespace rt
         return Vec3(0.15f, 0.15f, 0.15f);
     }
 
-    Vec3 Renderer::traceRay(const Ray &r, int depth, bool isPrimary, Vec3 &outAlbedo, Vec3 &outNormal)
-    {
-        if (depth <= 0)
-            return {0, 0, 0};
+    Vec3 Renderer::traceRay(const Ray &initialRay, int maxDepth, bool isPrimary, Vec3 &outAlbedo, Vec3 &outNormal) {
+        Vec3 resultColor = {0, 0, 0};
+        Vec3 currentThroughput = {1.0f, 1.0f, 1.0f}; 
+        Ray r = initialRay;
 
-        HitRecord rec;
-
-        if (!scene->hit(r, 0.001f, 1e9f, rec))
+        for (int depth = 0; depth < maxDepth; ++depth)
         {
-            if (scene->quads.empty())
-            {
-                Vec3 unit = normalize(r.direction);
-                float t = 0.5f * (unit.y + 1.0f);
-                Vec3 skyColor = (1.0f - t) * Vec3{1.0f, 1.0f, 1.0f} + t * Vec3{0.5f, 0.7f, 1.0f};
-
-                if (isPrimary)
+            HitRecord rec;
+            if (!scene->hit(r, 0.001f, 1e9f, rec)) {
+                Vec3 skyColor = {0, 0, 0};
+                if (scene->quads.empty()) 
                 {
-                    outAlbedo = rec.mat.albedo;
-                    outNormal = rec.normal;
+                    Vec3 unit = normalize(r.direction);
+                    float t = 0.5f * (unit.y + 1.0f);
+                    skyColor = (1.0f - t) * Vec3{1.0f, 1.0f, 1.0f} + t * Vec3{0.5f, 0.7f, 1.0f};
                 }
-                return skyColor;
-            }
-            else
-            {
-                if (isPrimary)
-                {
+
+                if (depth == 0 && isPrimary) {
                     outAlbedo = {0, 0, 0};
                     outNormal = {0, 0, 0};
                 }
-                return {0, 0, 0};
+                resultColor = resultColor + currentThroughput * skyColor;
+                break; 
             }
+            if (depth == 0 && isPrimary)
+            {
+                outAlbedo = rec.mat.albedo;
+                outNormal = (rec.normal + Vec3{1.0f, 1.0f, 1.0f}) * 0.5f;
+            }
+            Vec3 emitted = rec.mat.emitted(rec.u, rec.v, rec.p);
+            resultColor = resultColor + currentThroughput * emitted;
+
+            Ray scattered;
+            Vec3 attenuation;
+            if (!rec.mat.scatter(r, rec, attenuation, scattered))
+            {
+                break;
+            }
+            currentThroughput = currentThroughput * attenuation;
+            r = scattered;
         }
 
-        if (isPrimary)
-        {
-            outAlbedo = rec.mat.albedo;
-            outNormal = (rec.normal + Vec3{1.0f, 1.0f, 1.0f}) * 0.5f;
-        }
-
-        Ray scattered;
-        Vec3 attenuation;
-        Vec3 emitted = rec.mat.emitted(rec.u, rec.v, rec.p);
-
-        if (rec.mat.scatter(r, rec, attenuation, scattered))
-        {
-            return emitted + attenuation * traceRay(scattered, depth - 1, false, outAlbedo, outNormal);
-        }
-        return emitted;
+        return resultColor;
     }
 
     void Renderer::renderSample()
