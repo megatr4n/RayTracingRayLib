@@ -158,12 +158,12 @@ namespace rt
         Vec3 bl = {-2, 0, -2};
         Vec3 br = {2, 0, -2};
 
-        pyr.localTriangles.push_back({fl, fr, top, dummy});
-        pyr.localTriangles.push_back({fr, br, top, dummy});
-        pyr.localTriangles.push_back({br, bl, top, dummy});
-        pyr.localTriangles.push_back({bl, fl, top, dummy});
-        pyr.localTriangles.push_back({fl, bl, fr, dummy});
-        pyr.localTriangles.push_back({fr, bl, br, dummy});
+        pyr.localTriangles.push_back({fl, fr, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+        pyr.localTriangles.push_back({fr, br, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+        pyr.localTriangles.push_back({br, bl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+        pyr.localTriangles.push_back({bl, fl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+        pyr.localTriangles.push_back({fl, bl, fr, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+        pyr.localTriangles.push_back({fr, bl, br, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
 
         scene.meshes.push_back(pyr);
 
@@ -333,8 +333,8 @@ namespace rt
                 bool isSelected = (renderer.selection.type == ObjType::Sphere && renderer.selection.index == i);
                 if (isSelected)
                 {
-                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);                       // Авто-розгортання
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f)); // Жовтий колір тексту
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);                      
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
                 }
 
                 bool nodeOpen = ImGui::TreeNode(("Obj " + std::to_string(i)).c_str());
@@ -561,16 +561,33 @@ namespace rt
                 Vec3 bl = {-1, 0, -1};
                 Vec3 br = {1, 0, -1};
 
-                pyr.localTriangles.push_back({fl, fr, top, dummy});
-                pyr.localTriangles.push_back({fr, br, top, dummy});
-                pyr.localTriangles.push_back({br, bl, top, dummy});
-                pyr.localTriangles.push_back({bl, fl, top, dummy});
-
-                pyr.localTriangles.push_back({fl, bl, fr, dummy});
-                pyr.localTriangles.push_back({fr, bl, br, dummy});
-
+                pyr.localTriangles.push_back({fl, fr, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+                pyr.localTriangles.push_back({fr, br, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+                pyr.localTriangles.push_back({br, bl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+                pyr.localTriangles.push_back({bl, fl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+                pyr.localTriangles.push_back({fl, bl, fr, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+                pyr.localTriangles.push_back({fr, bl, br, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
                 scene.meshes.push_back(pyr);
                 changed = true;
+            }
+            ImGui::SameLine();
+
+            if (ImGui::Button("+ Load OBJ"))
+            {
+                Mesh loadedModel;
+                
+                Material modelMat;
+                modelMat.type = MaterialType::Metal;
+                modelMat.albedo = {0.8f, 0.6f, 0.2f};
+                modelMat.fuzz = 0.1f;
+
+                if (loadMeshFromOBJ("white_oak.obj", loadedModel, modelMat, {0, 1, 0}, 0.01f)) {
+                    loadedModel.buildBVH();
+                    scene.meshes.push_back(loadedModel);
+                    changed = true;
+                } else {
+                    std::cout << "Помилка: не вдалося завантажити car.obj. Перевір, чи лежить файл поруч із програмою!" << std::endl;
+                }
             }
         }
 

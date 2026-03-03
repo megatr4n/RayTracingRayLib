@@ -87,21 +87,13 @@ namespace rt
         Ray localRay(r.origin - position, r.direction);
         bool hitAny = false;
 
-        if (bvhRoot != nullptr)
-        {
-            if (bvhRoot->hit(localRay, tMin, tMax, rec))
-            {
-                hitAny = true;
-            }
-        }
-        else
-        {
+        if (bvh) {
+            if (bvh->hit(localRay, tMin, tMax, rec)) hitAny = true;
+        } else {
             float best = tMax;
             HitRecord tmp;
-            for (const auto &tri : localTriangles)
-            {
-                if (tri.hit(localRay, tMin, best, tmp))
-                {
+            for (const auto &tri : localTriangles) {
+                if (tri.hit(localRay, tMin, best, tmp)) {
                     hitAny = true;
                     best = tmp.t;
                     rec = tmp;
@@ -109,8 +101,7 @@ namespace rt
             }
         }
 
-        if (hitAny)
-        {
+        if (hitAny) {
             rec.p = rec.p + position;
             rec.mat = mat;
         }
@@ -254,62 +245,42 @@ namespace rt
         return true;
     }
 
-    Scene::~Scene()
-    {
-        delete bvhRoot;
-    }
+    Scene::~Scene(){}
 
     void Scene::buildBVH() {
-        delete bvhRoot;
-        bvhRoot = nullptr;
+        bvh = std::make_shared<BvhTree>();
 
         std::vector<BvhItem> items;
         items.reserve(spheres.size() + quads.size() + triangles.size() + meshes.size());
 
-        for (const auto &s : spheres) {
-            AABB b = s.boundingBox();
-            items.push_back({b, b.centroid(), &s, nullptr, nullptr, nullptr});
-        }
-        for (const auto &q : quads) {
-            AABB b = q.boundingBox();
-            items.push_back({b, b.centroid(), nullptr, &q, nullptr, nullptr});
-        }
-        for (const auto &t : triangles) {
-            AABB b = t.boundingBox();
-            items.push_back({b, b.centroid(), nullptr, nullptr, &t, nullptr});
-        }
-        for (const auto &m : meshes) {
-            AABB b = m.boundingBox();
-            items.push_back({b, b.centroid(), nullptr, nullptr, nullptr, &m});
-        }
+        for (const auto &s : spheres)
+            items.push_back({s.boundingBox(), s.boundingBox().centroid(), &s, nullptr, nullptr, nullptr});
+        for (const auto &q : quads)
+            items.push_back({q.boundingBox(), q.boundingBox().centroid(), nullptr, &q, nullptr, nullptr});
+        for (const auto &t : triangles)
+            items.push_back({t.boundingBox(), t.boundingBox().centroid(), nullptr, nullptr, &t, nullptr});
+        for (const auto &m : meshes)
+            items.push_back({m.boundingBox(), m.boundingBox().centroid(), nullptr, nullptr, nullptr, &m});
 
-        if (!items.empty()) {
-            bvhRoot = new BvhNode(items, 0, items.size());
-        }
+        bvh->build(items);
     }
 
     void Mesh::buildBVH() {
-        delete bvhRoot;
-        bvhRoot = nullptr;
+        bvh = std::make_shared<BvhTree>();
 
-        if (localTriangles.empty())
-            return;
+        if (localTriangles.empty()) return;
 
         std::vector<BvhItem> items;
         items.reserve(localTriangles.size());
 
-        for (const auto &tri : localTriangles)
-        {
-            AABB b = tri.boundingBox();
-            items.push_back({b, b.centroid(), nullptr, nullptr, &tri, nullptr});
+        for (const auto &tri : localTriangles) {
+            items.push_back({tri.boundingBox(), tri.boundingBox().centroid(), nullptr, nullptr, &tri, nullptr});
         }
-        bvhRoot = new BvhNode(items, 0, items.size());
+        bvh->build(items);
     }
 
     bool Scene::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const {
-    if (bvhRoot != nullptr) {
-        return bvhRoot->hit(r, tMin, tMax, rec);
+        if (bvh) return bvh->hit(r, tMin, tMax, rec);
+        return false;
     }
-    return false;
-}
 }
