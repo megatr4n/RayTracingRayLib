@@ -9,7 +9,7 @@
 namespace rt
 {
 
-    bool loadMeshFromOBJ(const std::string &filename, Mesh &outMesh, Material mat, Vec3 position, float scale)
+    bool loadMeshFromOBJ(const std::string &filename, Mesh &outMesh, uint32_t matIndex, Vec3 position, float scale)
     {
         tinyobj::ObjReaderConfig reader_config;
         tinyobj::ObjReader reader;
@@ -26,7 +26,7 @@ namespace rt
         auto &attrib = reader.GetAttrib();
         auto &shapes = reader.GetShapes();
 
-        outMesh.mat = mat;
+        outMesh.matIndex = matIndex;
         outMesh.position = position;
         outMesh.localTriangles.clear();
 
@@ -73,7 +73,7 @@ namespace rt
                     tri.hasNormals = true;
                 }
 
-                tri.mat = mat;
+                tri.matIndex = matIndex;
                 outMesh.localTriangles.push_back(tri);
 
                 index_offset += 3;
@@ -103,7 +103,7 @@ namespace rt
 
         if (hitAny) {
             rec.p = rec.p + position;
-            rec.mat = mat;
+            rec.matIndex = matIndex;
         }
         return hitAny;
     }
@@ -153,16 +153,16 @@ namespace rt
 
         get_sphere_uv(outward_normal, rec.u, rec.v);
 
-        rec.mat = mat;
+        rec.matIndex = matIndex;
         return true;
     }
 
-    void Quad::init(Vec3 _Q, Vec3 _u, Vec3 _v, Material _mat)
+    void Quad::init(Vec3 _Q, Vec3 _u, Vec3 _v, uint32_t _matIndex)
     {
         Q = _Q;
         u = _u;
         v = _v;
-        mat = _mat;
+        matIndex = _matIndex;
         Vec3 n = cross(u, v);
         normal = normalize(n);
         D = dot(normal, Q);
@@ -189,7 +189,7 @@ namespace rt
 
         rec.t = t;
         rec.p = intersection;
-        rec.mat = mat;
+        rec.matIndex = matIndex;
         rec.setFaceNormal(r, normal);
 
         rec.u = alpha;
@@ -237,7 +237,7 @@ namespace rt
         }
 
         rec.setFaceNormal(r, outwardNormal);
-        rec.mat = mat;
+        rec.matIndex = matIndex;
 
         rec.u = u;
         rec.v = v;

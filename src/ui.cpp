@@ -16,12 +16,19 @@ namespace rt
         scene.quads.clear();
         scene.triangles.clear();
         scene.meshes.clear();
+        scene.materials.clear();
 
-        scene.spheres.push_back({{0, -1000, 0}, 1000, {MaterialType::Lambertian, {0.5f, 0.5f, 0.5f}}});
+        scene.materials.push_back({MaterialType::Lambertian, {0.5f, 0.5f, 0.5f}});
+        scene.spheres.push_back({{0, -1000, 0}, 1000, (uint32_t)(scene.materials.size() - 1)});
 
-        scene.spheres.push_back({{0, 1, 0}, 1, {MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f}});
-        scene.spheres.push_back({{-4, 1, 0}, 1, {MaterialType::Lambertian, {0.4f, 0.2f, 0.1f}}});
-        scene.spheres.push_back({{4, 1, 0}, 1, {MaterialType::Metal, {0.7f, 0.6f, 0.5f}, {0, 0, 0}, 0.0f}});
+        scene.materials.push_back({MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f});
+        scene.spheres.push_back({{0, 1, 0}, 1, (uint32_t)(scene.materials.size() - 1)});
+
+        scene.materials.push_back({MaterialType::Lambertian, {0.4f, 0.2f, 0.1f}});
+        scene.spheres.push_back({{-4, 1, 0}, 1, (uint32_t)(scene.materials.size() - 1)});
+
+        scene.materials.push_back({MaterialType::Metal, {0.7f, 0.6f, 0.5f}, {0, 0, 0}, 0.0f});
+        scene.spheres.push_back({{4, 1, 0}, 1, (uint32_t)(scene.materials.size() - 1)});
 
         for (int a = -5; a < 5; a++)
         {
@@ -34,22 +41,27 @@ namespace rt
                     Sphere s;
                     s.center = center;
                     s.radius = 0.2f;
+
+                    Material newMat;
                     if (choose_mat < 0.8f)
                     {
-                        s.mat.type = MaterialType::Lambertian;
-                        s.mat.albedo = randomVec3() * randomVec3();
+                        newMat.type = MaterialType::Lambertian;
+                        newMat.albedo = randomVec3() * randomVec3();
                     }
                     else if (choose_mat < 0.95f)
                     {
-                        s.mat.type = MaterialType::Metal;
-                        s.mat.albedo = randomVec3(0.5f, 1.0f);
-                        s.mat.fuzz = randomFloat(0.0f, 0.5f);
+                        newMat.type = MaterialType::Metal;
+                        newMat.albedo = randomVec3(0.5f, 1.0f);
+                        newMat.fuzz = randomFloat(0.0f, 0.5f);
                     }
                     else
                     {
-                        s.mat.type = MaterialType::Dielectric;
-                        s.mat.ior = 1.5f;
+                        newMat.type = MaterialType::Dielectric;
+                        newMat.ior = 1.5f;
                     }
+                    scene.materials.push_back(newMat);
+                    s.matIndex = scene.materials.size() - 1;
+
                     scene.spheres.push_back(s);
                 }
             }
@@ -66,7 +78,7 @@ namespace rt
         cam.yaw = std::atan2(dir.z, dir.x) * (180.0f / 3.14159265f);
     }
 
-    void addBox(Scene &scene, Vec3 p0, Vec3 p1, Material mat, float angleY = 0.0f)
+    void addBox(Scene &scene, Vec3 p0, Vec3 p1, uint32_t matIndex, float angleY = 0.0f)
     {
         Vec3 min = {std::fmin(p0.x, p1.x), std::fmin(p0.y, p1.y), std::fmin(p0.z, p1.z)};
         Vec3 max = {std::fmax(p0.x, p1.x), std::fmax(p0.y, p1.y), std::fmax(p0.z, p1.z)};
@@ -85,7 +97,7 @@ namespace rt
                 v = v.rotateY(angleY);
             }
             Quad q;
-            q.init(Q, u, v, mat);
+            q.init(Q, u, v, matIndex);
             scene.quads.push_back(q);
         };
 
@@ -103,11 +115,19 @@ namespace rt
         scene.quads.clear();
         scene.triangles.clear();
         scene.meshes.clear();
+        scene.materials.clear();
 
-        Material red = {MaterialType::Lambertian, {0.65f, 0.05f, 0.05f}};
-        Material white = {MaterialType::Lambertian, {0.73f, 0.73f, 0.73f}};
-        Material green = {MaterialType::Lambertian, {0.12f, 0.45f, 0.15f}};
-        Material light = {MaterialType::DiffuseLight, {0, 0, 0}, {15, 15, 15}};
+        scene.materials.push_back({MaterialType::Lambertian, {0.65f, 0.05f, 0.05f}});
+        uint32_t red = scene.materials.size() - 1;
+
+        scene.materials.push_back({MaterialType::Lambertian, {0.73f, 0.73f, 0.73f}});
+        uint32_t white = scene.materials.size() - 1;
+
+        scene.materials.push_back({MaterialType::Lambertian, {0.12f, 0.45f, 0.15f}});
+        uint32_t green = scene.materials.size() - 1;
+
+        scene.materials.push_back({MaterialType::DiffuseLight, {0, 0, 0}, {15, 15, 15}});
+        uint32_t light = scene.materials.size() - 1;
 
         Quad q;
         q.init({555, 0, 0}, {0, 555, 0}, {0, 0, 555}, green);
@@ -126,7 +146,9 @@ namespace rt
 
         addBox(scene, {265, 0, 295}, {430, 330, 460}, white, angle1);
         addBox(scene, {130, 0, 65}, {295, 165, 230}, white, angle2);
-        scene.spheres.push_back({{190, 90, 190}, 90, {MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f}});
+
+        scene.materials.push_back({MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f});
+        scene.spheres.push_back({{190, 90, 190}, 90, (uint32_t)(scene.materials.size() - 1)});
 
         cam.lookFrom = {278, 278, -800};
         cam.lookAt = {278, 278, 0};
@@ -135,45 +157,6 @@ namespace rt
         cam.focusDist = 10.0f;
         cam.yaw = 90.0f;
         cam.pitch = 0.0f;
-    }
-
-    void createPyramidScene(Scene &scene, RtCameraParams &cam)
-    {
-        scene.spheres.clear();
-        scene.quads.clear();
-        scene.triangles.clear();
-        scene.meshes.clear();
-
-        scene.quads.push_back({{-2, 10, -2}, {4, 0, 0}, {0, 0, 4}, {MaterialType::DiffuseLight, {0, 0, 0}, {8.0f, 8.0f, 8.0f}}});
-        scene.quads.push_back({{-20, 0, -20}, {40, 0, 0}, {0, 0, 40}, {MaterialType::Lambertian, {0.5f, 0.5f, 0.5f}}});
-
-        Mesh pyr;
-        pyr.position = {0, 0, 0};
-        pyr.mat = {MaterialType::Metal, {0.8f, 0.6f, 0.2f}, {0, 0, 0}, 0.05f};
-        Material dummy = {MaterialType::Lambertian, {1, 1, 1}};
-
-        Vec3 top = {0, 4, 0};
-        Vec3 fl = {-2, 0, 2};
-        Vec3 fr = {2, 0, 2};
-        Vec3 bl = {-2, 0, -2};
-        Vec3 br = {2, 0, -2};
-
-        pyr.localTriangles.push_back({fl, fr, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-        pyr.localTriangles.push_back({fr, br, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-        pyr.localTriangles.push_back({br, bl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-        pyr.localTriangles.push_back({bl, fl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-        pyr.localTriangles.push_back({fl, bl, fr, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-        pyr.localTriangles.push_back({fr, bl, br, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-
-        scene.meshes.push_back(pyr);
-
-        cam.lookFrom = {0, 5, 12};
-        cam.lookAt = {0, 1.5f, 0};
-        cam.vfov = 40.0f;
-
-        Vec3 dir = normalize(cam.lookAt - cam.lookFrom);
-        cam.pitch = std::asin(dir.y) * (180.0f / 3.14159265f);
-        cam.yaw = std::atan2(dir.z, dir.x) * (180.0f / 3.14159265f);
     }
 
     bool drawUI(Renderer &renderer, Scene &scene)
@@ -333,7 +316,7 @@ namespace rt
                 bool isSelected = (renderer.selection.type == ObjType::Sphere && renderer.selection.index == i);
                 if (isSelected)
                 {
-                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);                      
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
                 }
 
@@ -347,35 +330,38 @@ namespace rt
                     changed |= ImGui::DragFloat3("Center", &s.center.x, 0.1f);
                     changed |= ImGui::SliderFloat("Radius", &s.radius, 0.05f, 100.0f);
 
+                    // Отримуємо посилання на матеріал!
+                    Material &objMat = scene.materials[s.matIndex];
+
                     const char *types[] = {"Lambertian", "Metal", "Dielectric", "DiffuseLight"};
-                    int t = (int)s.mat.type;
+                    int t = (int)objMat.type;
                     if (ImGui::Combo("Material", &t, types, 4))
                     {
-                        s.mat.type = (MaterialType)t;
+                        objMat.type = (MaterialType)t;
                         changed = true;
                     }
-                    changed |= ImGui::ColorEdit3("Albedo", &s.mat.albedo.x);
-                    if (s.mat.type == MaterialType::Metal)
-                        changed |= ImGui::SliderFloat("Fuzz", &s.mat.fuzz, 0.0f, 1.0f);
-                    if (s.mat.type == MaterialType::Dielectric)
-                        changed |= ImGui::SliderFloat("IOR", &s.mat.ior, 1.0f, 3.0f);
+                    changed |= ImGui::ColorEdit3("Albedo", &objMat.albedo.x);
+                    if (objMat.type == MaterialType::Metal)
+                        changed |= ImGui::SliderFloat("Fuzz", &objMat.fuzz, 0.0f, 1.0f);
+                    if (objMat.type == MaterialType::Dielectric)
+                        changed |= ImGui::SliderFloat("IOR", &objMat.ior, 1.0f, 3.0f);
 
                     ImGui::Separator();
                     ImGui::Text("Textures:");
                     if (ImGui::Button("Apply Checkerboard"))
                     {
-                        s.mat.tex = std::make_shared<rt::CheckerTexture>(
+                        objMat.tex = std::make_shared<rt::CheckerTexture>(
                             2.0f, rt::Vec3(0.2f, 0.3f, 0.1f), rt::Vec3(0.9f, 0.9f, 0.9f));
                         changed = true;
                     }
                     if (ImGui::Button("Apply 'earth.jpg'"))
                     {
-                        s.mat.tex = std::make_shared<rt::ImageTexture>("/Users/daniilpanasiuk/Desktop/RayTracingRayLib-4/earth.jpg");
+                        objMat.tex = std::make_shared<rt::ImageTexture>("/Users/daniilpanasiuk/Desktop/RayTracingRayLib-4/earth.jpg");
                         changed = true;
                     }
                     if (ImGui::Button("Clear Texture"))
                     {
-                        s.mat.tex = nullptr;
+                        objMat.tex = nullptr;
                         changed = true;
                     }
                     ImGui::Separator();
@@ -421,7 +407,7 @@ namespace rt
                     {
                         Vec3 delta = center - oldCenter;
                         q.Q = q.Q + delta;
-                        q.init(q.Q, q.u, q.v, q.mat);
+                        q.init(q.Q, q.u, q.v, q.matIndex);
                         changed = true;
                     }
                     ImGui::Separator();
@@ -433,28 +419,29 @@ namespace rt
 
                     if (quadMoved)
                     {
-                        q.init(q.Q, q.u, q.v, q.mat);
+                        q.init(q.Q, q.u, q.v, q.matIndex);;
                         changed = true;
                     }
 
+                    Material &objMat = scene.materials[q.matIndex];
                     const char *types[] = {"Lambertian", "Metal", "Dielectric", "DiffuseLight"};
-                    int t = (int)q.mat.type;
+                    int t = (int)objMat.type;
                     if (ImGui::Combo("Material", &t, types, 4))
                     {
-                        q.mat.type = (MaterialType)t;
-                        q.init(q.Q, q.u, q.v, q.mat);
+                        objMat.type = (MaterialType)t;
+                        q.init(q.Q, q.u, q.v, q.matIndex);
                         changed = true;
                     }
-                    if (ImGui::ColorEdit3("Albedo", &q.mat.albedo.x))
+                    if (ImGui::ColorEdit3("Albedo", &objMat.albedo.x))
                     {
-                        q.init(q.Q, q.u, q.v, q.mat);
+                        q.init(q.Q, q.u, q.v, q.matIndex);
                         changed = true;
                     }
 
-                    if (q.mat.type == MaterialType::Metal)
-                        changed |= ImGui::SliderFloat("Fuzz", &q.mat.fuzz, 0.0f, 1.0f);
-                    if (q.mat.type == MaterialType::Dielectric)
-                        changed |= ImGui::SliderFloat("IOR", &q.mat.ior, 1.0f, 3.0f);
+                    if (objMat.type == MaterialType::Metal)
+                        changed |= ImGui::SliderFloat("Fuzz", &objMat.fuzz, 0.0f, 1.0f);
+                    if (objMat.type == MaterialType::Dielectric)
+                        changed |= ImGui::SliderFloat("IOR", &objMat.ior, 1.0f, 3.0f);
 
                     if (ImGui::Button("Remove"))
                     {
@@ -493,19 +480,20 @@ namespace rt
                 {
                     changed |= ImGui::DragFloat3("Position", &m.position.x, 0.1f);
 
+                    Material &objMat = scene.materials[m.matIndex];
                     const char *types[] = {"Lambertian", "Metal", "Dielectric", "DiffuseLight"};
-                    int t = (int)m.mat.type;
+                    int t = (int)objMat.type;
                     if (ImGui::Combo("Material", &t, types, 4))
                     {
-                        m.mat.type = (MaterialType)t;
+                        objMat.type = (MaterialType)t;
                         changed = true;
                     }
-                    changed |= ImGui::ColorEdit3("Albedo", &m.mat.albedo.x);
+                    changed |= ImGui::ColorEdit3("Albedo", &objMat.albedo.x);
 
-                    if (m.mat.type == MaterialType::Metal)
-                        changed |= ImGui::SliderFloat("Fuzz", &m.mat.fuzz, 0.0f, 1.0f);
-                    if (m.mat.type == MaterialType::Dielectric)
-                        changed |= ImGui::SliderFloat("IOR", &m.mat.ior, 1.0f, 3.0f);
+                    if (objMat.type == MaterialType::Metal)
+                        changed |= ImGui::SliderFloat("Fuzz", &objMat.fuzz, 0.0f, 1.0f);
+                    if (objMat.type == MaterialType::Dielectric)
+                        changed |= ImGui::SliderFloat("IOR", &objMat.ior, 1.0f, 3.0f);
 
                     if (ImGui::Button("Remove"))
                     {
@@ -531,7 +519,7 @@ namespace rt
                 Sphere ns;
                 ns.center = {0, 0, 0};
                 ns.radius = 0.5f;
-                ns.mat = {MaterialType::Lambertian, {0.8f, 0.2f, 0.2f}};
+                ns.matIndex = scene.materials.size() - 1;
                 scene.spheres.push_back(ns);
                 changed = true;
             }
@@ -541,7 +529,7 @@ namespace rt
             if (ImGui::Button("+ Quad"))
             {
                 Quad nq;
-                nq.init({-1, 0, -1}, {2, 0, 0}, {0, 0, 2}, {MaterialType::Lambertian, {0.2f, 0.8f, 0.2f}});
+                nq.init({-1, 0, -1}, {2, 0, 0}, {0, 0, 2}, scene.materials.size() - 1);
                 scene.quads.push_back(nq);
                 changed = true;
             }
@@ -550,10 +538,15 @@ namespace rt
 
             if (ImGui::Button("+ Pyramid"))
             {
+                scene.materials.push_back({MaterialType::Lambertian, {0.8f, 0.6f, 0.2f}});
+                uint32_t pyrMat = scene.materials.size() - 1;
+                
+                scene.materials.push_back({MaterialType::Lambertian, {1.0f, 1.0f, 1.0f}});
+                uint32_t dummy = scene.materials.size() - 1;
+                
                 Mesh pyr;
                 pyr.position = {0, 0, 0};
-                pyr.mat = {MaterialType::Lambertian, {0.8f, 0.6f, 0.2f}};
-                Material dummy = {MaterialType::Lambertian, {1, 1, 1}};
+                pyr.matIndex = pyrMat;
 
                 Vec3 top = {0, 2, 0};
                 Vec3 fl = {-1, 0, 1};
@@ -567,40 +560,40 @@ namespace rt
                 pyr.localTriangles.push_back({bl, fl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
                 pyr.localTriangles.push_back({fl, bl, fr, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
                 pyr.localTriangles.push_back({fr, bl, br, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
+                
                 scene.meshes.push_back(pyr);
                 changed = true;
             }
             ImGui::SameLine();
 
-            if (ImGui::Button("+ Load OBJ"))
-            {
+            if (ImGui::Button("+ Load OBJ")) {
                 Mesh loadedModel;
-                
+
                 Material modelMat;
                 modelMat.type = MaterialType::Metal;
                 modelMat.albedo = {0.8f, 0.6f, 0.2f};
                 modelMat.fuzz = 0.1f;
+                
+                scene.materials.push_back(modelMat);
+                
+                uint32_t modelMatIdx = scene.materials.size() - 1;
 
-                if (loadMeshFromOBJ("white_oak.obj", loadedModel, modelMat, {0, 1, 0}, 0.01f)) {
+                if (loadMeshFromOBJ("white_oak.obj", loadedModel, modelMatIdx, {0, 1, 0}, 0.01f)) {
                     loadedModel.buildBVH();
                     scene.meshes.push_back(loadedModel);
                     changed = true;
-                } else {
-                    std::cout << "Помилка: не вдалося завантажити car.obj. Перевір, чи лежить файл поруч із програмою!" << std::endl;
+                }
+                else {
+                    std::cout << "Error: Failed to load white_oak.obj. Please check if the file is located in the same directory as the executable." << std::endl;
                 }
             }
         }
-
         if (renderer.isRendering)
             ImGui::EndDisabled();
-
         ImGui::End();
-
-        if (changed)
-        {
+        if (changed) {
             scene.buildBVH();
         }
         return changed;
     }
-
 }

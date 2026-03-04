@@ -10,114 +10,142 @@
 
 using namespace rt;
 
-static Scene buildScene() {
-    Scene scene;
-    srand(42);
+static Scene buildScene()
+{
+  Scene scene;
+  srand(42);
 
-    { Sphere s; s.center={0,-1000,0}; s.radius=1000;
-      s.mat.type=MaterialType::Lambertian; s.mat.albedo={0.5f,0.5f,0.5f};
-      scene.spheres.push_back(s); }
-    { Sphere s; s.center={0,1,0}; s.radius=1;
-      s.mat.type=MaterialType::Dielectric; s.mat.ior=1.5f;
-      scene.spheres.push_back(s); }
-    { Sphere s; s.center={-4,1,0}; s.radius=1;
-      s.mat.type=MaterialType::Lambertian; s.mat.albedo={0.4f,0.2f,0.1f};
-      scene.spheres.push_back(s); }
-    { Sphere s; s.center={4,1,0}; s.radius=1;
-      s.mat.type=MaterialType::Metal; s.mat.albedo={0.7f,0.6f,0.5f}; s.mat.fuzz=0.0f;
-      scene.spheres.push_back(s); }
+  scene.materials.push_back(rt::Material{rt::MaterialType::Lambertian, {0.5f, 0.5f, 0.5f}}); {
+    Sphere s;
+    s.center = {0, -1000, 0};
+    s.radius = 1000;
+    s.matIndex = scene.materials.size() - 1;
+    scene.spheres.push_back(s);
+  }
 
-    for (int a = -5; a < 5; a++) {
-        for (int b = -5; b < 5; b++) {
-            Vec3 center = {a + 0.9f*randomFloat(), 0.2f, b + 0.9f*randomFloat()};
-            if ((center - Vec3{4,0.2f,0}).length() <= 0.9f) continue;
-            Sphere s; s.center=center; s.radius=0.2f;
-            float r = randomFloat();
-            if (r < 0.6f) {
-                s.mat.type=MaterialType::Lambertian;
-                s.mat.albedo=randomVec3()*randomVec3();
-            } else if (r < 0.85f) {
-                s.mat.type=MaterialType::Metal;
-                s.mat.albedo=randomVec3(0.5f,1.0f);
-                s.mat.fuzz=randomFloat(0.0f,0.3f);
-            } else {
-                s.mat.type=MaterialType::Dielectric; s.mat.ior=1.5f;
-            }
-            scene.spheres.push_back(s);
-        }
+  scene.materials.push_back(rt::Material{rt::MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f}); {
+    Sphere s;
+    s.center = {0, 1, 0};
+    s.radius = 1;
+    s.matIndex = scene.materials.size() - 1;
+    scene.spheres.push_back(s);
+  }
+
+  scene.materials.push_back(rt::Material{rt::MaterialType::Lambertian, {0.4f, 0.2f, 0.1f}}); {
+    Sphere s;
+    s.center = {-4, 1, 0};
+    s.radius = 1;
+    s.matIndex = scene.materials.size() - 1;
+    scene.spheres.push_back(s);
+  }
+
+  scene.materials.push_back(rt::Material{rt::MaterialType::Metal, {0.7f, 0.6f, 0.5f}, {0, 0, 0}, 0.0f}); {
+    Sphere s;
+    s.center = {4, 1, 0};
+    s.radius = 1;
+    s.matIndex = scene.materials.size() - 1;
+    scene.spheres.push_back(s);
+  }
+
+  for (int a = -5; a < 5; a++) {
+    for (int b = -5; b < 5; b++) {
+      Vec3 center = {a + 0.9f * randomFloat(), 0.2f, b + 0.9f * randomFloat()};
+      if ((center - Vec3{4, 0.2f, 0}).length() <= 0.9f)
+        continue;
+
+      Sphere s;
+      s.center = center;
+      s.radius = 0.2f;
+
+      float r = randomFloat();
+
+      if (r < 0.6f) {
+        scene.materials.push_back(rt::Material{rt::MaterialType::Lambertian, randomVec3() * randomVec3()});
+      }
+      else if (r < 0.85f) {
+        scene.materials.push_back(rt::Material{rt::MaterialType::Metal, randomVec3(0.5f, 1.0f), {0, 0, 0}, randomFloat(0.0f, 0.3f)});
+      }
+      else {
+        scene.materials.push_back(rt::Material{rt::MaterialType::Dielectric, {1.0f, 1.0f, 1.0f}, {0, 0, 0}, 0.0f, 1.5f});
+      }
+      s.matIndex = scene.materials.size() - 1;
+      scene.spheres.push_back(s);
     }
-    return scene;
+  }
+  return scene;
 }
-Camera3D ConvertCamera(const RtCameraParams& params) {
-  Camera3D cam = { 0 };
-  cam.position   = { 
-    params.lookFrom.x, params.lookFrom.y, params.lookFrom.z 
-  };
-  cam.target     = { 
-    params.lookAt.x, params.lookAt.y, params.lookAt.z 
-  };
-  cam.up         = { 
-    params.vUp.x, params.vUp.y, params.vUp.z 
-  };
-  cam.fovy       = params.vfov;
+Camera3D ConvertCamera(const RtCameraParams &params) {
+  Camera3D cam = {0};
+  cam.position = {
+      params.lookFrom.x, params.lookFrom.y, params.lookFrom.z};
+  cam.target = {
+      params.lookAt.x, params.lookAt.y, params.lookAt.z};
+  cam.up = {
+      params.vUp.x, params.vUp.y, params.vUp.z};
+  cam.fovy = params.vfov;
   cam.projection = CAMERA_PERSPECTIVE;
   return cam;
 }
 
 int main() {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
-    InitWindow(1280, 720, "Real-Time Raytracer | raylib + ImGui");
-    SetTargetFPS(60);
-    rlImGuiSetup(true);
+  SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+  InitWindow(1280, 720, "Real-Time Raytracer | raylib + ImGui");
+  SetTargetFPS(60);
+  rlImGuiSetup(true);
 
-    Scene    scene = buildScene();
+  Scene scene = buildScene();
 
-    scene.buildBVH();
+  scene.buildBVH();
 
-    Renderer renderer;
-    renderer.settings.width         = 1280;
-    renderer.settings.height        = 720;
-    renderer.settings.maxBounces    = 8;
-    renderer.settings.samplesTarget = 256;
-    renderer.camParams.vfov         = 20.0f;
-    renderer.camParams.aperture     = 0.1f;
-    renderer.camParams.focusDist    = 10.0f;
-    renderer.camParams.lookFrom     = {13, 2, 3};
-    renderer.camParams.lookAt       = {0, 0, 0};
-    renderer.init(&scene);
+  Renderer renderer;
+  renderer.settings.width = 1280;
+  renderer.settings.height = 720;
+  renderer.settings.maxBounces = 8;
+  renderer.settings.samplesTarget = 256;
+  renderer.camParams.vfov = 20.0f;
+  renderer.camParams.aperture = 0.1f;
+  renderer.camParams.focusDist = 10.0f;
+  renderer.camParams.lookFrom = {13, 2, 3};
+  renderer.camParams.lookAt = {0, 0, 0};
+  renderer.init(&scene);
 
-    while (!WindowShouldClose()) {
-      renderer.update(GetFrameTime());
-      renderer.renderSample();
+  while (!WindowShouldClose())
+  {
+    renderer.update(GetFrameTime());
+    renderer.renderSample();
 
-      BeginDrawing();
-      ClearBackground(BLACK);
+    BeginDrawing();
+    ClearBackground(BLACK);
 
-      if (renderer.isRendering) {
-          Rectangle srcRect = { 0, 0, (float)renderer.outputTex.width, -(float)renderer.outputTex.height };
-          Rectangle destRect = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
-          DrawTexturePro(renderer.outputTex, srcRect, destRect, {0,0}, 0.0f, WHITE);
-          
-          DrawText(TextFormat("Rendering... Sample: %d", renderer.samplesDone), 10, 10, 20, ORANGE);
-      } else {
-          renderer.drawRaylibPreview();
-          DrawText("PREVIEW MODE (TAB to toggle cursor, WASD to Fly)", 10, 10, 20, GREEN);
-      }
+    if (renderer.isRendering)
+    {
+      Rectangle srcRect = {0, 0, (float)renderer.outputTex.width, -(float)renderer.outputTex.height};
+      Rectangle destRect = {0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()};
+      DrawTexturePro(renderer.outputTex, srcRect, destRect, {0, 0}, 0.0f, WHITE);
 
-      rlImGuiBegin();
-      ImGui::SetNextWindowPos ({(float)(GetScreenWidth()-340), 0}, ImGuiCond_Always);
-      ImGui::SetNextWindowSize({340, (float)GetScreenHeight()},    ImGuiCond_Always);
-      
-      if (drawUI(renderer, scene)) {
-          renderer.reset();
-      }
-      rlImGuiEnd();
+      DrawText(TextFormat("Rendering... Sample: %d", renderer.samplesDone), 10, 10, 20, ORANGE);
+    }
+    else
+    {
+      renderer.drawRaylibPreview();
+      DrawText("PREVIEW MODE (TAB to toggle cursor, WASD to Fly)", 10, 10, 20, GREEN);
+    }
 
-      EndDrawing();
+    rlImGuiBegin();
+    ImGui::SetNextWindowPos({(float)(GetScreenWidth() - 340), 0}, ImGuiCond_Always);
+    ImGui::SetNextWindowSize({340, (float)GetScreenHeight()}, ImGuiCond_Always);
+
+    if (drawUI(renderer, scene))
+    {
+      renderer.reset();
+    }
+    rlImGuiEnd();
+
+    EndDrawing();
   }
   rlImGuiShutdown();
-    UnloadTexture(renderer.outputTex);
-    CloseWindow();
-    
-    return 0;
+  UnloadTexture(renderer.outputTex);
+  CloseWindow();
+
+  return 0;
 }

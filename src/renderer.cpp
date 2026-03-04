@@ -230,7 +230,10 @@ namespace rt
                 {
                     rt::Vec3 oldCenter = scene->quads[selection.index].Q + (scene->quads[selection.index].u + scene->quads[selection.index].v) * 0.5f;
                     scene->quads[selection.index].Q = scene->quads[selection.index].Q + (newPos - oldCenter);
-                    scene->quads[selection.index].init(scene->quads[selection.index].Q, scene->quads[selection.index].u, scene->quads[selection.index].v, scene->quads[selection.index].mat);
+                    scene->quads[selection.index].init(scene->quads[selection.index].Q, 
+                    scene->quads[selection.index].u,
+                    scene->quads[selection.index].v,
+                    scene->quads[selection.index].matIndex);
                 }
             }
         }
@@ -292,11 +295,13 @@ namespace rt
         HitRecord rec;
         if (scene->hit(r, 0.001f, 1e9f, rec))
         {
-            if (rec.mat.tex != nullptr)
+            const Material& hitMat = scene->materials[rec.matIndex];
+            
+            if (hitMat.tex != nullptr)
             {
-                return rec.mat.tex->value(rec.u, rec.v, rec.p);
+                return hitMat.tex->value(rec.u, rec.v, rec.p);
             }
-            return rec.mat.albedo;
+            return hitMat.albedo;
         }
         return Vec3(0.15f, 0.15f, 0.15f);
     }
@@ -325,22 +330,31 @@ namespace rt
                 resultColor = resultColor + currentThroughput * skyColor;
                 break; 
             }
+            const Material& hitMat = scene->materials[rec.matIndex];
             if (depth == 0 && isPrimary)
             {
-                outAlbedo = rec.mat.albedo;
+                outAlbedo = hitMat.albedo;
                 outNormal = (rec.normal + Vec3{1.0f, 1.0f, 1.0f}) * 0.5f;
             }
-            Vec3 emitted = rec.mat.emitted(rec.u, rec.v, rec.p);
+            Vec3 emitted = hitMat.emitted(rec.u, rec.v, rec.p);
             resultColor = resultColor + currentThroughput * emitted;
 
             Ray scattered;
             Vec3 attenuation;
-            if (!rec.mat.scatter(r, rec, attenuation, scattered))
+            if (!hitMat.scatter(r, rec, attenuation, scattered))
             {
                 break;
             }
             currentThroughput = currentThroughput * attenuation;
             r = scattered;
+
+            if (depth > 2) {
+                float p = std::max({currentThroughput.x, currentThroughput.y, currentThroughput.z});
+                if (randomFloat() > p) {
+                    break;
+                }
+                currentThroughput = currentThroughput * (1.0f / p);
+            }
         }
 
         return resultColor;
@@ -448,10 +462,11 @@ namespace rt
 
         for (const auto &s : scene->spheres)
         {
+            const Material& mat = scene->materials[s.matIndex];
             Color col = {
-                (unsigned char)(s.mat.albedo.x * 255.0f),
-                (unsigned char)(s.mat.albedo.y * 255.0f),
-                (unsigned char)(s.mat.albedo.z * 255.0f), 255};
+                (unsigned char)(mat.albedo.x * 255.0f),
+                (unsigned char)(mat.albedo.y * 255.0f),
+                (unsigned char)(mat.albedo.z * 255.0f), 255};
             Vector3 center = {s.center.x, s.center.y, s.center.z};
             Vector3 size = {s.radius * 2.0f, s.radius * 2.0f, s.radius * 2.0f};
 
@@ -462,10 +477,11 @@ namespace rt
 
         for (const auto &t : scene->triangles)
         {
+            const Material& mat = scene->materials[t.matIndex];
             Color col = {
-                (unsigned char)(t.mat.albedo.x * 255.0f),
-                (unsigned char)(t.mat.albedo.y * 255.0f),
-                (unsigned char)(t.mat.albedo.z * 255.0f), 255};
+                (unsigned char)(mat.albedo.x * 255.0f),
+                (unsigned char)(mat.albedo.y * 255.0f),
+                (unsigned char)(mat.albedo.z * 255.0f), 255};
 
             Vector3 p1 = {t.v0.x, t.v0.y, t.v0.z};
             Vector3 p2 = {t.v1.x, t.v1.y, t.v1.z};
@@ -485,10 +501,11 @@ namespace rt
             rt::Vec3 lightDir = rt::normalize(rt::Vec3{0.5f, 1.0f, -0.8f});
             float diffuse = std::max(0.4f, rt::dot(normal, lightDir));
 
+            const Material& mat = scene->materials[q.matIndex];
             Color col = {
-                (unsigned char)(q.mat.albedo.x * diffuse * 255.0f),
-                (unsigned char)(q.mat.albedo.y * diffuse * 255.0f),
-                (unsigned char)(q.mat.albedo.z * diffuse * 255.0f), 255};
+                (unsigned char)(mat.albedo.x * diffuse * 255.0f),
+                (unsigned char)(mat.albedo.y * diffuse * 255.0f),
+                (unsigned char)(mat.albedo.z * diffuse * 255.0f), 255};
 
             Vector3 p1 = {q.Q.x, q.Q.y, q.Q.z};
             Vector3 p2 = {q.Q.x + q.u.x, q.Q.y + q.u.y, q.Q.z + q.u.z};
@@ -508,10 +525,11 @@ namespace rt
 
         for (const auto &m : scene->meshes)
         {
+            const Material& mat = scene->materials[m.matIndex];
             Color col = {
-                (unsigned char)(m.mat.albedo.x * 255.0f),
-                (unsigned char)(m.mat.albedo.y * 255.0f),
-                (unsigned char)(m.mat.albedo.z * 255.0f), 255};
+                (unsigned char)(mat.albedo.x * 255.0f),
+                (unsigned char)(mat.albedo.y * 255.0f),
+                (unsigned char)(mat.albedo.z * 255.0f), 255};
             for (const auto &t : m.localTriangles)
             {
                 Vector3 p1 = {t.v0.x + m.position.x, t.v0.y + m.position.y, t.v0.z + m.position.z};

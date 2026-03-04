@@ -14,7 +14,7 @@ namespace rt
     {
         Vec3 p;
         Vec3 normal;
-        Material mat;
+        uint32_t matIndex = 0;
         float t = 0;
         float u;
         float v;
@@ -27,7 +27,7 @@ namespace rt
     {
         Vec3 center;
         float radius = 0.5f;
-        Material mat;
+        uint32_t matIndex = 0;
 
         bool hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const;
 
@@ -43,13 +43,13 @@ namespace rt
         Vec3 Q;
         Vec3 u;
         Vec3 v;
-        Material mat;
+        uint32_t matIndex = 0;
 
         Vec3 normal;
         float D;
         Vec3 w;
 
-        void init(Vec3 _Q, Vec3 _u, Vec3 _v, Material _mat);
+        void init(Vec3 _Q, Vec3 _u, Vec3 _v, uint32_t _matIndex);
         bool hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const;
 
         AABB boundingBox() const
@@ -94,7 +94,7 @@ namespace rt
         Vec3 v0, v1, v2;
         Vec3 n0, n1, n2;
         bool hasNormals = false;
-        Material mat;
+        uint32_t matIndex = 0;
 
         bool hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const;
 
@@ -134,7 +134,7 @@ namespace rt
     {
         Vec3 position;
         std::vector<Triangle> localTriangles;
-        Material mat;
+        uint32_t matIndex = 0;
         std::shared_ptr<BvhTree> bvh;
 
         void buildBVH();
@@ -189,17 +189,17 @@ namespace rt
 
     struct Scene
     {
+        std::vector<Material> materials;
         std::vector<Sphere> spheres;
         std::vector<Quad> quads;
         std::vector<Triangle> triangles;
         std::vector<Mesh> meshes;
-
         std::shared_ptr<BvhTree> bvh;
 
         ~Scene();
         void buildBVH();
         bool hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const;
     };
-    bool loadMeshFromOBJ(const std::string &filename, Mesh &outMesh, Material mat, Vec3 position = {0, 0, 0}, float scale = 1.0f);
+    bool loadMeshFromOBJ(const std::string &filename, Mesh &outMesh, uint32_t matIndex, Vec3 position = {0, 0, 0}, float scale = 1.0f);
 
 }
