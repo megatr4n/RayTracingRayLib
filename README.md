@@ -58,7 +58,7 @@ To optimize calculation depth without biased energy loss, stochastic early termi
 
 ## Performance Benchmarks
 
-Measured on **[2.3 GHz Dual-Core Intel Core i5]**, Release build (`-O3 -march=native`), resolution **800×450**.
+Measured on **[2.3 GHz Dual-Core Intel Core i5]**, Release build (`-O3 -march=native`), resolution **1280×720**.
 
 | Scene Complexity | Benchmark Metric | Result | Notes |
 | :--- | :--- | :--- | :--- |
