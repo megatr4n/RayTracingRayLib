@@ -406,7 +406,17 @@ namespace rt
             }
         });
 
+        auto start = std::chrono::high_resolution_clock::now();
         executor.run(taskflow).wait();
+
+        auto end = std::chrono::high_resolution_clock::now();
+        lastFrameTimeMs = std::chrono::duration<float, std::milli>(end - start).count();
+
+        float totalPixels = settings.width * settings.height;
+        float timeSeconds = lastFrameTimeMs / 1000.0f;
+        if (timeSeconds > 0.0f) {
+            mraysPerSecond = (totalPixels / 1000000.0f) / timeSeconds;
+        }
 
         samplesDone++;
         uploadPixels();

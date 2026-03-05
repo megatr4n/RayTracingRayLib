@@ -45,6 +45,10 @@ public:
 
     Texture2D        outputTex   = {};
     int samplesDone = 0;
+
+    float lastBvhBuildTimeMs = 0.0f;
+    float lastFrameTimeMs = 0.0f;
+    float mraysPerSecond = 0.0f;
     
     bool isPreview   = true;
     bool isRendering = false;

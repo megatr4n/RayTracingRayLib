@@ -196,6 +196,8 @@ namespace rt
         std::vector<Mesh> meshes;
         std::shared_ptr<BvhTree> bvh;
 
+        float lastBvhBuildTimeMs = 0.0f;
+
         ~Scene();
         void buildBVH();
         bool hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const;

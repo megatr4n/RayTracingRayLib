@@ -87,13 +87,19 @@ namespace rt
         Ray localRay(r.origin - position, r.direction);
         bool hitAny = false;
 
-        if (bvh) {
-            if (bvh->hit(localRay, tMin, tMax, rec)) hitAny = true;
-        } else {
+        if (bvh)
+        {
+            if (bvh->hit(localRay, tMin, tMax, rec))
+                hitAny = true;
+        }
+        else
+        {
             float best = tMax;
             HitRecord tmp;
-            for (const auto &tri : localTriangles) {
-                if (tri.hit(localRay, tMin, best, tmp)) {
+            for (const auto &tri : localTriangles)
+            {
+                if (tri.hit(localRay, tMin, best, tmp))
+                {
                     hitAny = true;
                     best = tmp.t;
                     rec = tmp;
@@ -101,7 +107,8 @@ namespace rt
             }
         }
 
-        if (hitAny) {
+        if (hitAny)
+        {
             rec.p = rec.p + position;
             rec.matIndex = matIndex;
         }
@@ -245,9 +252,12 @@ namespace rt
         return true;
     }
 
-    Scene::~Scene(){}
+    Scene::~Scene() {}
 
-    void Scene::buildBVH() {
+    void Scene::buildBVH()
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
         bvh = std::make_shared<BvhTree>();
 
         std::vector<BvhItem> items;
@@ -263,24 +273,32 @@ namespace rt
             items.push_back({m.boundingBox(), m.boundingBox().centroid(), nullptr, nullptr, nullptr, &m});
 
         bvh->build(items);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        lastBvhBuildTimeMs = std::chrono::duration<float, std::milli>(end - start).count();
     }
 
-    void Mesh::buildBVH() {
+    void Mesh::buildBVH()
+    {
         bvh = std::make_shared<BvhTree>();
 
-        if (localTriangles.empty()) return;
+        if (localTriangles.empty())
+            return;
 
         std::vector<BvhItem> items;
         items.reserve(localTriangles.size());
 
-        for (const auto &tri : localTriangles) {
+        for (const auto &tri : localTriangles)
+        {
             items.push_back({tri.boundingBox(), tri.boundingBox().centroid(), nullptr, nullptr, &tri, nullptr});
         }
         bvh->build(items);
     }
 
-    bool Scene::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const {
-        if (bvh) return bvh->hit(r, tMin, tMax, rec);
+    bool Scene::hit(const Ray &r, float tMin, float tMax, HitRecord &rec) const
+    {
+        if (bvh)
+            return bvh->hit(r, tMin, tMax, rec);
         return false;
     }
 }

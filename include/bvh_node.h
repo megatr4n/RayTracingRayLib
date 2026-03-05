@@ -3,6 +3,7 @@
 #include "hittable.h"
 #include <vector>
 #include <algorithm>
+#include <future>
 
 namespace rt
 {
@@ -157,8 +158,18 @@ namespace rt
                 mid = start + count / 2;
             }
 
-            left = new BvhNode(objects, start, mid);
-            right = new BvhNode(objects, mid, end);
+            if (count > 256)
+            {
+                auto futureLeft = std::async(std::launch::async, [&]()
+                                             { return new BvhNode(objects, start, mid); });
+                right = new BvhNode(objects, mid, end);
+                left = futureLeft.get();
+            }
+            else
+            {
+                left = new BvhNode(objects, start, mid);
+                right = new BvhNode(objects, mid, end);
+            }
         }
 
         void makeLeaf(std::vector<BvhItem> &objects, size_t start, size_t end)
@@ -208,8 +219,8 @@ namespace rt
     {
         AABB box;
         int rightOffset;
-        int itemsOffset; 
-        int itemsCount; 
+        int itemsOffset;
+        int itemsCount;
     };
 
     inline int flattenBvhTree(BvhNode *node, std::vector<LinearBvhNode> &flatNodes, std::vector<BvhItem> &flatItems)

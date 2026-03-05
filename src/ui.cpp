@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <chrono>
 
 namespace rt
 {
@@ -290,6 +291,17 @@ namespace rt
         if (renderer.isRendering)
             ImGui::BeginDisabled();
 
+        if (ImGui::CollapsingHeader("Performance Metrics", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Text("BVH Build Time:  %.2f ms", scene.lastBvhBuildTimeMs);
+            ImGui::Text("Last Frame Time: %.2f ms", renderer.lastFrameTimeMs);
+
+            ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "Performance:     %.2f MRays/s", renderer.mraysPerSecond);
+
+            ImGui::Separator();
+            ImGui::Text("Threads used: %ld (Taskflow)", renderer.executor.num_workers());
+        }
+
         if (ImGui::CollapsingHeader("Render Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
             changed |= ImGui::SliderInt("Max Bounces", &renderer.settings.maxBounces, 1, 32);
@@ -356,7 +368,7 @@ namespace rt
                     }
                     if (ImGui::Button("Apply 'earth.jpg'"))
                     {
-                        objMat.tex = std::make_shared<rt::ImageTexture>("/Users/daniilpanasiuk/Desktop/RayTracingRayLib-4/earth.jpg");
+                        objMat.tex = std::make_shared<rt::ImageTexture>("assets/earth.jpg");
                         changed = true;
                     }
                     if (ImGui::Button("Clear Texture"))
@@ -419,7 +431,8 @@ namespace rt
 
                     if (quadMoved)
                     {
-                        q.init(q.Q, q.u, q.v, q.matIndex);;
+                        q.init(q.Q, q.u, q.v, q.matIndex);
+                        ;
                         changed = true;
                     }
 
@@ -540,10 +553,10 @@ namespace rt
             {
                 scene.materials.push_back({MaterialType::Lambertian, {0.8f, 0.6f, 0.2f}});
                 uint32_t pyrMat = scene.materials.size() - 1;
-                
+
                 scene.materials.push_back({MaterialType::Lambertian, {1.0f, 1.0f, 1.0f}});
                 uint32_t dummy = scene.materials.size() - 1;
-                
+
                 Mesh pyr;
                 pyr.position = {0, 0, 0};
                 pyr.matIndex = pyrMat;
@@ -554,36 +567,39 @@ namespace rt
                 Vec3 bl = {-1, 0, -1};
                 Vec3 br = {1, 0, -1};
 
-                pyr.localTriangles.push_back({fl, fr, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-                pyr.localTriangles.push_back({fr, br, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-                pyr.localTriangles.push_back({br, bl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-                pyr.localTriangles.push_back({bl, fl, top, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-                pyr.localTriangles.push_back({fl, bl, fr, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-                pyr.localTriangles.push_back({fr, bl, br, {0,0,0}, {0,0,0}, {0,0,0}, false, dummy});
-                
+                pyr.localTriangles.push_back({fl, fr, top, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false, dummy});
+                pyr.localTriangles.push_back({fr, br, top, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false, dummy});
+                pyr.localTriangles.push_back({br, bl, top, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false, dummy});
+                pyr.localTriangles.push_back({bl, fl, top, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false, dummy});
+                pyr.localTriangles.push_back({fl, bl, fr, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false, dummy});
+                pyr.localTriangles.push_back({fr, bl, br, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false, dummy});
+
                 scene.meshes.push_back(pyr);
                 changed = true;
             }
             ImGui::SameLine();
 
-            if (ImGui::Button("+ Load OBJ")) {
+            if (ImGui::Button("+ Load OBJ"))
+            {
                 Mesh loadedModel;
 
                 Material modelMat;
                 modelMat.type = MaterialType::Metal;
                 modelMat.albedo = {0.8f, 0.6f, 0.2f};
                 modelMat.fuzz = 0.1f;
-                
+
                 scene.materials.push_back(modelMat);
-                
+
                 uint32_t modelMatIdx = scene.materials.size() - 1;
 
-                if (loadMeshFromOBJ("white_oak.obj", loadedModel, modelMatIdx, {0, 1, 0}, 0.01f)) {
+                if (loadMeshFromOBJ("white_oak.obj", loadedModel, modelMatIdx, {0, 1, 0}, 0.01f))
+                {
                     loadedModel.buildBVH();
                     scene.meshes.push_back(loadedModel);
                     changed = true;
                 }
-                else {
+                else
+                {
                     std::cout << "Error: Failed to load white_oak.obj. Please check if the file is located in the same directory as the executable." << std::endl;
                 }
             }
@@ -591,8 +607,12 @@ namespace rt
         if (renderer.isRendering)
             ImGui::EndDisabled();
         ImGui::End();
-        if (changed) {
+        if (changed)
+        {
+            auto start = std::chrono::high_resolution_clock::now();
             scene.buildBVH();
+            auto end = std::chrono::high_resolution_clock::now();
+            renderer.lastBvhBuildTimeMs = std::chrono::duration<float, std::milli>(end - start).count();
         }
         return changed;
     }
