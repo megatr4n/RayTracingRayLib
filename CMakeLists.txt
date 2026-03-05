@@ -68,3 +68,13 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+     add_custom_target(run
+    COMMAND $<TARGET_FILE:raytracer>
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:raytracer>
+    DEPENDS raytracer
+    COMMENT "Launching RayTracingRayLib..."
+)

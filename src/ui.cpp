@@ -342,7 +342,6 @@ namespace rt
                     changed |= ImGui::DragFloat3("Center", &s.center.x, 0.1f);
                     changed |= ImGui::SliderFloat("Radius", &s.radius, 0.05f, 100.0f);
 
-                    // Отримуємо посилання на матеріал!
                     Material &objMat = scene.materials[s.matIndex];
 
                     const char *types[] = {"Lambertian", "Metal", "Dielectric", "DiffuseLight"};
@@ -592,7 +591,7 @@ namespace rt
 
                 uint32_t modelMatIdx = scene.materials.size() - 1;
 
-                if (loadMeshFromOBJ("white_oak.obj", loadedModel, modelMatIdx, {0, 1, 0}, 0.01f))
+                if (loadMeshFromOBJ("assets/white_oak.obj", loadedModel, modelMatIdx, {0, 1, 0}, 0.01f))
                 {
                     loadedModel.buildBVH();
                     scene.meshes.push_back(loadedModel);

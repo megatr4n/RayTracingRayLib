@@ -230,10 +230,10 @@ namespace rt
                 {
                     rt::Vec3 oldCenter = scene->quads[selection.index].Q + (scene->quads[selection.index].u + scene->quads[selection.index].v) * 0.5f;
                     scene->quads[selection.index].Q = scene->quads[selection.index].Q + (newPos - oldCenter);
-                    scene->quads[selection.index].init(scene->quads[selection.index].Q, 
-                    scene->quads[selection.index].u,
-                    scene->quads[selection.index].v,
-                    scene->quads[selection.index].matIndex);
+                    scene->quads[selection.index].init(scene->quads[selection.index].Q,
+                                                       scene->quads[selection.index].u,
+                                                       scene->quads[selection.index].v,
+                                                       scene->quads[selection.index].matIndex);
                 }
             }
         }
@@ -295,8 +295,8 @@ namespace rt
         HitRecord rec;
         if (scene->hit(r, 0.001f, 1e9f, rec))
         {
-            const Material& hitMat = scene->materials[rec.matIndex];
-            
+            const Material &hitMat = scene->materials[rec.matIndex];
+
             if (hitMat.tex != nullptr)
             {
                 return hitMat.tex->value(rec.u, rec.v, rec.p);
@@ -306,31 +306,34 @@ namespace rt
         return Vec3(0.15f, 0.15f, 0.15f);
     }
 
-    Vec3 Renderer::traceRay(const Ray &initialRay, int maxDepth, bool isPrimary, Vec3 &outAlbedo, Vec3 &outNormal) {
+    Vec3 Renderer::traceRay(const Ray &initialRay, int maxDepth, bool isPrimary, Vec3 &outAlbedo, Vec3 &outNormal)
+    {
         Vec3 resultColor = {0, 0, 0};
-        Vec3 currentThroughput = {1.0f, 1.0f, 1.0f}; 
+        Vec3 currentThroughput = {1.0f, 1.0f, 1.0f};
         Ray r = initialRay;
 
         for (int depth = 0; depth < maxDepth; ++depth)
         {
             HitRecord rec;
-            if (!scene->hit(r, 0.001f, 1e9f, rec)) {
+            if (!scene->hit(r, 0.001f, 1e9f, rec))
+            {
                 Vec3 skyColor = {0, 0, 0};
-                if (scene->quads.empty()) 
+                if (scene->quads.empty())
                 {
                     Vec3 unit = normalize(r.direction);
                     float t = 0.5f * (unit.y + 1.0f);
                     skyColor = (1.0f - t) * Vec3{1.0f, 1.0f, 1.0f} + t * Vec3{0.5f, 0.7f, 1.0f};
                 }
 
-                if (depth == 0 && isPrimary) {
+                if (depth == 0 && isPrimary)
+                {
                     outAlbedo = {0, 0, 0};
                     outNormal = {0, 0, 0};
                 }
                 resultColor = resultColor + currentThroughput * skyColor;
-                break; 
+                break;
             }
-            const Material& hitMat = scene->materials[rec.matIndex];
+            const Material &hitMat = scene->materials[rec.matIndex];
             if (depth == 0 && isPrimary)
             {
                 outAlbedo = hitMat.albedo;
@@ -348,9 +351,11 @@ namespace rt
             currentThroughput = currentThroughput * attenuation;
             r = scattered;
 
-            if (depth > 2) {
+            if (depth > 2)
+            {
                 float p = std::max({currentThroughput.x, currentThroughput.y, currentThroughput.z});
-                if (randomFloat() > p) {
+                if (randomFloat() > p)
+                {
                     break;
                 }
                 currentThroughput = currentThroughput * (1.0f / p);
@@ -381,7 +386,8 @@ namespace rt
         int numTilesY = (H + TILE_SIZE - 1) / TILE_SIZE;
         int totalTiles = numTilesX * numTilesY;
 
-        taskflow.for_each_index(0, totalTiles, 1, [&](int tileIdx) {
+        taskflow.for_each_index(0, totalTiles, 1, [&](int tileIdx)
+                                {
             int tileY = tileIdx / numTilesX;
             int tileX = tileIdx % numTilesX;
 
@@ -403,8 +409,7 @@ namespace rt
                     albedoBuffer[idx] += pixelAlbedo;
                     normalBuffer[idx] += pixelNormal;
                 }
-            }
-        });
+            } });
 
         auto start = std::chrono::high_resolution_clock::now();
         executor.run(taskflow).wait();
@@ -414,7 +419,8 @@ namespace rt
 
         float totalPixels = settings.width * settings.height;
         float timeSeconds = lastFrameTimeMs / 1000.0f;
-        if (timeSeconds > 0.0f) {
+        if (timeSeconds > 0.0f)
+        {
             mraysPerSecond = (totalPixels / 1000000.0f) / timeSeconds;
         }
 
@@ -472,7 +478,7 @@ namespace rt
 
         for (const auto &s : scene->spheres)
         {
-            const Material& mat = scene->materials[s.matIndex];
+            const Material &mat = scene->materials[s.matIndex];
             Color col = {
                 (unsigned char)(mat.albedo.x * 255.0f),
                 (unsigned char)(mat.albedo.y * 255.0f),
@@ -487,7 +493,7 @@ namespace rt
 
         for (const auto &t : scene->triangles)
         {
-            const Material& mat = scene->materials[t.matIndex];
+            const Material &mat = scene->materials[t.matIndex];
             Color col = {
                 (unsigned char)(mat.albedo.x * 255.0f),
                 (unsigned char)(mat.albedo.y * 255.0f),
@@ -511,7 +517,7 @@ namespace rt
             rt::Vec3 lightDir = rt::normalize(rt::Vec3{0.5f, 1.0f, -0.8f});
             float diffuse = std::max(0.4f, rt::dot(normal, lightDir));
 
-            const Material& mat = scene->materials[q.matIndex];
+            const Material &mat = scene->materials[q.matIndex];
             Color col = {
                 (unsigned char)(mat.albedo.x * diffuse * 255.0f),
                 (unsigned char)(mat.albedo.y * diffuse * 255.0f),
@@ -535,23 +541,33 @@ namespace rt
 
         for (const auto &m : scene->meshes)
         {
-            const Material& mat = scene->materials[m.matIndex];
+            const Material &mat = scene->materials[m.matIndex];
             Color col = {
                 (unsigned char)(mat.albedo.x * 255.0f),
                 (unsigned char)(mat.albedo.y * 255.0f),
                 (unsigned char)(mat.albedo.z * 255.0f), 255};
-            for (const auto &t : m.localTriangles)
+
+            bool isHeavy = m.localTriangles.size() > 500;
+
+            for (size_t i = 0; i < m.localTriangles.size(); ++i)
             {
+                if (isHeavy && i % 10 != 0)
+                    continue;
+
+                const auto &t = m.localTriangles[i];
                 Vector3 p1 = {t.v0.x + m.position.x, t.v0.y + m.position.y, t.v0.z + m.position.z};
                 Vector3 p2 = {t.v1.x + m.position.x, t.v1.y + m.position.y, t.v1.z + m.position.z};
                 Vector3 p3 = {t.v2.x + m.position.x, t.v2.y + m.position.y, t.v2.z + m.position.z};
 
                 DrawTriangle3D(p1, p2, p3, col);
-                DrawTriangle3D(p1, p3, p2, col);
 
-                DrawLine3D(p1, p2, GREEN);
-                DrawLine3D(p2, p3, GREEN);
-                DrawLine3D(p3, p1, GREEN);
+                if (!isHeavy)
+                {
+                    DrawTriangle3D(p1, p3, p2, col);
+                    DrawLine3D(p1, p2, GREEN);
+                    DrawLine3D(p2, p3, GREEN);
+                    DrawLine3D(p3, p1, GREEN);
+                }
             }
         }
         if (selection.type != ObjType::None && !isRendering)
